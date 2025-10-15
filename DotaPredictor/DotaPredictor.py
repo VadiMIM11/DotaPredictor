@@ -9,6 +9,11 @@ from tqdm import tqdm
 
 import config
 
+def extract_hero_ids(feature_vector):
+    radiant_heroes = [i for i, val in enumerate(feature_vector) if val == 1]
+    dire_heroes = [i for i, val in enumerate(feature_vector) if val == -1]
+    return radiant_heroes, dire_heroes
+
 def generate_feature_vector(match_json):
     feture_vector = np.zeros(config.MAX_HERO_ID + 1, dtype=int)
     if not match_json["pickBans"]:
@@ -216,7 +221,7 @@ def main():
         false_positive_count = 0
         true_negative_count = 0
         false_negative_count = 0
-
+        outdrafted = []
         for match_key, match_value in tqdm(matches.items()):
             try:
                 feature_vector = generate_feature_vector(match_value)
@@ -225,6 +230,17 @@ def main():
                 if didRadiantWin is None:
                     print(f"Match {match_key} has no radiantWin field, skipping...")
                     continue
+                if abs(0.5 - predicted_prob) > 0.04:
+                    # print()
+                    # print(f"Highly outdrafted match detected!")
+                    # print(f"Match ID: {match_key}")
+                    # print(f"Predicted Radiant win probability: {predicted_prob:.2f}")
+                    # print(f"Did Radiant win: {didRadiantWin}")
+                    # radiant_heroes, dire_heroes = extract_hero_ids(feature_vector)
+                    # print(f"Radiant Draft: {radiant_heroes}")
+                    # print(f"Dire Draft: {dire_heroes}")
+                    # print()
+                    outdrafted.append(match_value.get("id"))
                 predictRadiantWin = predicted_prob > 0.5
                 if predictRadiantWin == didRadiantWin:
                     correct_predictions += 1
@@ -257,6 +273,6 @@ def main():
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
 
-
+        print("HIghly Outdrafted Matches:", outdrafted)
 if __name__ == "__main__":
     main()
