@@ -1,9 +1,10 @@
 DATA_FOLDER = 'data'
 FETCH_TRAIN_SIZE = 10000
-MAX_MATCHES_IN_QUERY = 1000
-LATEST_MATCH_ID = 8511891229
-MIN_RANK = 7 # [0..8] 0 = Uncalibrated, 1 = Herald, 8 = Immortal
+MAX_MATCHES_IN_QUERY = 1500
+LATEST_MATCH_ID = 8513358237
+MIN_RANK = 0 # [0..8] 0 = Uncalibrated, 1 = Herald, 8 = Immortal
 RANKED_ONLY = False
 GAMEMODES = ["ALL_PICK", "ALL_PICK_RANKED", "RANDOM_DRAFT", "SINGLE_DRAFT", "CAPTAINS_MODE"]
 NUM_HEROES = 126
 MAX_HERO_ID = 145
+API_TOKEN = "" # do not set your token here use CLI arguments instead

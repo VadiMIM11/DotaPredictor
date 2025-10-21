@@ -131,7 +131,7 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--stratz", type=str, help="Set stratz.com API token", required=False
+        "--stratz", type=str, help="Set path to file with stratz.com API token", required=False
     )
     parser.add_argument(
         "--fetch_train",
@@ -155,24 +155,32 @@ def main():
     args = parser.parse_args()
 
     if args.stratz:
-        print("Stratz API Token: ", args.stratz[:10] + "...")
+        print("Stratz API token file path:", args.stratz)
+        token = ""
+        try:
+            with open(args.stratz, "r") as f:
+                token = f.read()
+        except IOError as e:
+            print(f"Error reading file: {e}")
+        print("Stratz API Token: ", token[:10] + "...")
+        config.API_TOKEN = token
 
     if args.update:
         if not args.stratz:
             print(
-                "Please provide stratz.com API token to update local hero stats dataset using:\n --stratz <TOKEN>"
+                "Please provide stratz.com API token to update local hero stats dataset using:\n --stratz <PATH>"
             )
             return
 
-        update_local_stats(args.stratz)
+        update_local_stats(config.API_TOKEN)
 
     if args.fetch_train:
         if not args.stratz:
             print(
-                "Please provide stratz.com API token to fetch latest matches for training dataset using:\n --stratz <TOKEN>"
+                "Please provide stratz.com API token to fetch latest matches for training dataset using:\n --stratz <PATH>"
             )
             return
-        json_data = sq.fetch_train(args.stratz)
+        json_data = sq.fetch_train(config.api_token)
         save_raw_train(json_data)
 
     if args.filter:
