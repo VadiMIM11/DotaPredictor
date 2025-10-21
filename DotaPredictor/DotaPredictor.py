@@ -30,6 +30,24 @@ def generate_feature_vector(match_json):
             feture_vector[hero_id] = 1 if pick["isRadiant"] else -1
     return feture_vector
 
+def get_label(match_json):
+    if not match_json["didRadiantWin"]:
+        print("No match result in match:", match_json["id"])
+        raise Exception("No match result")
+        exit(1)
+    if match_json["didRadiantWin"]:
+        return 1
+    else:
+        return -1
+
+def generate_treining_set(matches_json):
+    matches = matches.get("data")
+    # TODO FINISH function 
+    for match in matches:
+        feture_vector = generate_feature_vector(match)
+        label = get_label(match)
+    return X, y
+
 def update_local_stats(api_token):
     print("Updating local hero statistics dataset via stratz.com requests...")
     stats = sq.fetch_all_stats(api_token)
