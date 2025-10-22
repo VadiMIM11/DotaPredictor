@@ -42,10 +42,13 @@ def get_label(match_json):
 
 def generate_treining_set(matches_json):
     matches = matches.get("data")
-    # TODO FINISH function 
+    X = np.zeroes((1, config.MAX_HERO_ID + 1))
+    y = np.zeroes((1, 1))
     for match in matches:
-        feture_vector = generate_feature_vector(match)
+        feature_vector = generate_feature_vector(match)
         label = get_label(match)
+        X.append(feature_vector)
+        y.append(label)
     return X, y
 
 def update_local_stats(api_token):
@@ -170,6 +173,12 @@ def main():
         help="Test algebraic predictor on training dataset",
         )
 
+    parser.add_argument(
+        "--train_logreg",
+        action="store_true",
+        required=False,
+        help="Train logistic regression model on training dataset",)
+
     args = parser.parse_args()
 
     if args.stratz:
@@ -198,7 +207,7 @@ def main():
                 "Please provide stratz.com API token to fetch latest matches for training dataset using:\n --stratz <PATH>"
             )
             return
-        json_data = sq.fetch_train(config.api_token)
+        json_data = sq.fetch_train(config.API_TOKEN)
         save_raw_train(json_data)
 
     if args.filter:
@@ -237,6 +246,7 @@ def main():
                 all_stats = json.load(f)
         except IOError as e:
             print(f"Could not access hero stats file: {e}")
+            print("Try fetching hero stats from stratz using --update")
             exit(1)
         matches = data["data"]
         total_matches = len(matches)

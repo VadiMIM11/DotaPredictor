@@ -11,9 +11,9 @@
     <OutputPath>.</OutputPath>
     <Name>DotaPredictor</Name>
     <RootNamespace>DotaPredictor</RootNamespace>
-    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>MSBuild|DotaPredictorEnv|$(MSBuildProjectFullPath)</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>--filter --test_alg_predict </CommandLineArguments>
+    <CommandLineArguments>--filter --train_logreg --test_alg_predict --stratz  ./data/token</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -33,6 +33,15 @@
     <Compile Include="SVRPredictor.py" />
   </ItemGroup>
   <ItemGroup>
+    <Interpreter Include="DotaPredictorEnv\">
+      <Id>DotaPredictorEnv</Id>
+      <Version>3.13</Version>
+      <Description>DotaPredictorEnv (Python 3.13 (64-bit))</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
     <Interpreter Include="env\">
       <Id>env</Id>
       <Version>3.13</Version>
