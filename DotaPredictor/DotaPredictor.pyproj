@@ -11,9 +11,9 @@
     <OutputPath>.</OutputPath>
     <Name>DotaPredictor</Name>
     <RootNamespace>DotaPredictor</RootNamespace>
-    <InterpreterId>MSBuild|DotaPredictorEnv|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>--filter --train_logreg --test_alg_predict --stratz  ./data/token</CommandLineArguments>
+    <CommandLineArguments>--filter --train_logreg --train_rbf --test_alg_predict --stratz  ./data/token</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -28,9 +28,9 @@
     <Compile Include="algPredictor.py" />
     <Compile Include="config.py" />
     <Compile Include="DotaPredictor.py" />
-    <Compile Include="logisticRegression.py" />
+    <Compile Include="logRegPredictor.py" />
     <Compile Include="stratzQueries.py" />
-    <Compile Include="SVRPredictor.py" />
+    <Compile Include="rbfPredictor.py" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="DotaPredictorEnv\">
@@ -51,6 +51,9 @@
       <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
       <Architecture>X64</Architecture>
     </Interpreter>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="requirements.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

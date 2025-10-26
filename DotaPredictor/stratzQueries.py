@@ -3,6 +3,7 @@ import requests
 import json
 import os
 import copy
+from tqdm import tqdm
 
 import config
 
@@ -179,23 +180,25 @@ def fetch_train(api_token):
     }
     current_latest_id = config.LATEST_MATCH_ID
     current_json = {}
-    for i in range(config.FETCH_TRAIN_SIZE // config.MAX_MATCHES_IN_QUERY):
+    print("Fetching matches from stratz ...")
+    for i in tqdm(range(config.FETCH_TRAIN_SIZE // config.MAX_MATCHES_IN_QUERY)):
         FETCH_TRAIN_QUERY = generate_fetch_train_query(
             api_token, current_latest_id, config.MAX_MATCHES_IN_QUERY
         )
-        print(
-            f"Matches [{current_latest_id} .. {current_latest_id - config.MAX_MATCHES_IN_QUERY + 1}]"
-        )
-        print(
-            f"Fetching a batch of {config.MAX_MATCHES_IN_QUERY} matches from stratz..."
-        )
+        # print(
+        #     f"Matches [{current_latest_id} .. {current_latest_id - config.MAX_MATCHES_IN_QUERY + 1}]"
+        # )
+        # print(
+        #     f"Fetching a batch of {config.MAX_MATCHES_IN_QUERY} matches from stratz..."
+        # )
 
         response = requests.post(
             URL, json={"query": FETCH_TRAIN_QUERY}, headers=headers
         )
 
         if response.status_code == 200:
-            print("Success! Fetched training set!")
+            #print("Success! Fetched training set!")
+            pass
         else:
             print("Query failed with code:", response.status_code)
             # print("Skipping...")

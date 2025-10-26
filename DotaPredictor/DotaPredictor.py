@@ -1,13 +1,17 @@
 import argparse
 from ast import parse
+import random
 import re
 import numpy as np
 import stratzQueries as sq
 import json
 import os
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 import config
+import logRegPredictor
+import rbfPredictor
 
 def extract_hero_ids(feature_vector):
     radiant_heroes = [i for i, val in enumerate(feature_vector) if val == 1]
@@ -31,7 +35,7 @@ def generate_feature_vector(match_json):
     return feture_vector
 
 def get_label(match_json):
-    if not match_json["didRadiantWin"]:
+    if match_json.get("didRadiantWin") is None:
         print("No match result in match:", match_json["id"])
         raise Exception("No match result")
         exit(1)
@@ -41,14 +45,16 @@ def get_label(match_json):
         return -1
 
 def generate_treining_set(matches_json):
-    matches = matches.get("data")
-    X = np.zeroes((1, config.MAX_HERO_ID + 1))
-    y = np.zeroes((1, 1))
-    for match in matches:
+    matches = matches_json.get("data")
+    X_list = []
+    y_list = []
+    for key, match in matches.items():
         feature_vector = generate_feature_vector(match)
         label = get_label(match)
-        X.append(feature_vector)
-        y.append(label)
+        X_list.append(feature_vector)
+        y_list.append(label)
+    X = np.array(X_list)
+    y = np.array(y_list)
     return X, y
 
 def update_local_stats(api_token):
@@ -123,10 +129,10 @@ def clean_train():
                 filtered_pick_bans = [
                     pick for pick in match_value["pickBans"] if pick["isPick"] is True
                 ]
-            match_value["pickBans"] = filtered_pick_bans
+                match_value["pickBans"] = filtered_pick_bans
 
-            if match_value["pickBans"]:
-                filtered_matches[match_key] = match_value
+                if match_value["pickBans"]:
+                    filtered_matches[match_key] = match_value
     print("Clean train size:", len(filtered_matches))
     data["data"] = filtered_matches
 
@@ -179,6 +185,12 @@ def main():
         required=False,
         help="Train logistic regression model on training dataset",)
 
+    parser.add_argument(
+        "--train_rbf",
+        action="store_true",
+        required=False,
+        help="Train RBF SVM model on training dataset",)
+
     args = parser.parse_args()
 
     if args.stratz:
@@ -189,6 +201,7 @@ def main():
                 token = f.read()
         except IOError as e:
             print(f"Error reading file: {e}")
+            exit(1)
         print("Stratz API Token: ", token[:10] + "...")
         config.API_TOKEN = token
 
@@ -212,6 +225,68 @@ def main():
 
     if args.filter:
         clean_train()
+
+    if args.train_logreg:
+        try:
+            with open(os.path.join(config.DATA_FOLDER, "clean_train.json")) as f:
+                data = json.load(f)
+        except:
+            print("Could not access clean training data file. Please run with --filter first.")
+            return
+
+        X, y = generate_treining_set(data)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=config.RANDOM_STATE)
+        logRegPredictor.train_logreg(X_train, y_train)
+        print()
+        header = "="*5 + " Logistic Regression Predictor " + "="*5
+        print(header)
+        print("Total matches to test:", y_test.size)
+        print()
+        accuracy, cm = logRegPredictor.evaluate_logreg(X_test, y_test)
+        print(f"Logistic Regression Model Accuracy: {accuracy:.4f}")
+        print("True Negatives:", cm[0][0])
+        print("False Positives:", cm[0][1])
+        print("False Negatives:", cm[1][0])
+        print("True Positives:", cm[1][1])
+        precision = cm[1][1] / (cm[1][1] + cm[0][1]) if (cm[1][1] + cm[0][1]) > 0 else 0 # Precision TP / (TP + FP)
+        sensitivity = cm[1][1] / (cm[1][1] + cm[1][0]) if (cm[1][1] + cm[1][0]) > 0 else 0 # Sensitivity (Recall) TP / (TP + FN)
+        specificity = cm[0][0] / (cm[0][0] + cm[0][1]) if (cm[0][0] + cm[0][1]) > 0 else 0 # Specificity TN / (TN + FP)
+        print(f"Precision: {precision:.4f}")
+        print(f"Sensitivity (Recall): {sensitivity:.4f}")
+        print(f"Specificity: {specificity:.4f}")
+        print("=" * len(header))
+
+    if args.train_rbf:
+        try:
+            with open(os.path.join(config.DATA_FOLDER, "clean_train.json")) as f:
+                data = json.load(f)
+        except:
+            print("Could not access clean training data file. Please run with --filter first.")
+            return
+        X, y = generate_treining_set(data)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=config.RANDOM_STATE)
+        print("Training RBF SVM Predictor...")
+        rbfPredictor.train_rbf(X_train, y_train)
+        print("Done training!")
+        print()
+        header = "="*5 + " RBF SVM Predictor " + "="*5
+        print(header)
+        print("Total matches to test:", y_test.size)
+        print()
+        accuracy, cm = rbfPredictor.evaluate_rbf(X_test, y_test)
+        print(f"RBF SVM Model Accuracy: {accuracy:.4f}")
+        print("True Negatives:", cm[0][0])
+        print("False Positives:", cm[0][1])
+        print("False Negatives:", cm[1][0])
+        print("True Positives:", cm[1][1])
+        precision = cm[1][1] / (cm[1][1] + cm[0][1]) if (cm[1][1] + cm[0][1]) > 0 else 0
+        sensitivity = cm[1][1] / (cm[1][1] + cm[1][0]) if (cm[1][1] + cm[1][0]) > 0 else 0
+        specificity = cm[0][0] / (cm[0][0] + cm[0][1]) if (cm[0][0] + cm[0][1]) > 0 else 0
+        print(f"Precision: {precision:.4f}")
+        print(f"Sensitivity (Recall): {sensitivity:.4f}")
+        print(f"Specificity: {specificity:.4f}")
+        print("=" * len(header))
+
 
     if args.test_alg_predict:
         from algPredictor import predict
@@ -248,6 +323,10 @@ def main():
             print(f"Could not access hero stats file: {e}")
             print("Try fetching hero stats from stratz using --update")
             exit(1)
+
+        print()
+        header = "="*5 + " Statistical Prediictor " + "="*5
+        print(header)
         matches = data["data"]
         total_matches = len(matches)
         print("Total matches to test:", total_matches)
@@ -258,7 +337,7 @@ def main():
         true_negative_count = 0
         false_negative_count = 0
         outdrafted = []
-        for match_key, match_value in tqdm(matches.items()):
+        for match_key, match_value in matches.items():
             try:
                 feature_vector = generate_feature_vector(match_value)
                 predicted_prob = predict(feature_vector, all_stats)
@@ -294,7 +373,7 @@ def main():
                 print(f"Error processing match {match_key}: {e}")
                 continue
         print()
-        print(f"Total predictions made: {total_predictions}")
+        #print(f"Total predictions made: {total_predictions}")
         print(f"Correct predictions: {correct_predictions}")
         print(f"True Positives: {true_positive_count}")
         print(f"False Positives: {false_positive_count}")
@@ -310,5 +389,6 @@ def main():
         print(f"Specificity: {specificity:.4f}")
 
         print("HIghly Outdrafted Matches:", outdrafted)
+        print("=" * len(header))
 if __name__ == "__main__":
     main()
