@@ -5,6 +5,7 @@ import json
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix
+import DotaPredictor
 
 import config
 
@@ -28,11 +29,10 @@ def evaluate_logreg(X_test, y_test):
     return accuracy, cm
 
 def predict_by_match_id(match_id):
-    exit(1)
+    #exit(1)
     # TODO
-    try:
-        with open(f"{config.DATA_FOLDER}/raw_train.json", "r") as f:
-            matches = json.load(f)
-    except IOError:
-        print("Raw training data not found. Please run the data fetching script first.")
-        return None
+    match = DotaPredictor.get_match_by_id(match_id)
+    X = DotaPredictor.generate_feature_vector(match)
+    return predict_proba_logreg([X])[0]
+    print(f"Match id {match_id} not found in data")
+    return None

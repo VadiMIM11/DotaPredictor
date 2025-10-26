@@ -32,7 +32,6 @@ query getHeroStats($id: Short!) {
 URL = "https://api.stratz.com/graphql"
 
 
-
 def generate_hero_ids(api_token):
     print("Obtaining ids of all existing heroes from single stratz query...")
     hero_stats = fetch_hero_stats(1, api_token)
@@ -100,7 +99,6 @@ def generate_fetch_all_query(api_token):
     return query
 
 
-
 def generate_fetch_train_query(api_token, latest_match_id, fetch_size):
     if fetch_size < 1:
         Raise("fetch_size must be at least 1")
@@ -141,6 +139,7 @@ def combine_query_response(response1, response2):
 
     return combined_response
 
+
 def fetch_all_winrates(api_token):
     headers = {
         "Content-Type": "application/json",
@@ -159,9 +158,7 @@ def fetch_all_winrates(api_token):
         }
         """
     print("Fetching all hero winrates from stratz...")
-    response = requests.post( 
-        URL, json={"query": query}, headers=headers
-    )
+    response = requests.post(URL, json={"query": query}, headers=headers)
     if response.status_code == 200:
         print("Success! Fetched winrates for all heroes!")
 
@@ -171,6 +168,7 @@ def fetch_all_winrates(api_token):
         raise Exception(
             f"Query failed with status code {response.status_code}: {response.text}"
         )
+
 
 def fetch_train(api_token):
     headers = {
@@ -197,7 +195,7 @@ def fetch_train(api_token):
         )
 
         if response.status_code == 200:
-            #print("Success! Fetched training set!")
+            # print("Success! Fetched training set!")
             pass
         else:
             print("Query failed with code:", response.status_code)
@@ -228,6 +226,51 @@ def fetch_train(api_token):
         current_json = combine_query_response(current_json, response.json())
 
     return current_json
+
+
+def fetch_match_by_id(api_token, m_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_token}",
+        "User-Agent": "STRATZ_API",
+    }
+    variables = {"id": m_id}
+    query = """
+        query getMatch($id: Long!){
+          match(id: $id)
+          {
+            id
+            didRadiantWin
+            lobbyType
+            gameMode
+            bracket
+            pickBans
+            {
+              isPick
+              heroId
+              bannedHeroId
+              isRadiant
+            }
+          }
+        }
+        """
+    print(f"Fetching match {m_id} data from stratz...")
+    response = requests.post(
+        URL,
+        json={"query": query, "variables": variables},
+        headers=headers,
+    )
+
+    if response.status_code == 200:
+        print("Success! Fetched match data!")
+        # print(response.json())
+        data = response.json()
+        return data
+    else:
+        print("Query failed with code:", response.status_code)
+        raise Exception(
+            f"Query failed with status code {response.status_code}: {response.text}"
+        )
 
 
 def fetch_hero_stats(hero_id, api_token):

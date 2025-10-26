@@ -20,7 +20,7 @@ def extract_hero_ids(feature_vector):
 
 def generate_feature_vector(match_json):
     feture_vector = np.zeros(config.MAX_HERO_ID + 1, dtype=int)
-    if not match_json["pickBans"]:
+    if match_json.get("pickBans") is None:
         print("No pickBans in match:", match_json["id"])
         raise Exception("No pickBans in match")
         exit(1)
@@ -81,6 +81,29 @@ def update_local_stats(api_token):
 
     print(f"Local hero stats dataset updated and saved to {PATH}")
 
+def get_match_by_id(match_id):
+    try:
+        with open(f"{config.DATA_FOLDER}/clean_train.json", "r") as f:
+            matches = json.load(f)
+        matches = matches.get("data")
+        if matches is None:
+            print("Error reading data file")
+            return None
+        for key, match in matches.items():
+            current_id = match.get("id")
+            if not current_id is None and current_id == match_id:
+                return match
+    except IOError:
+        print("Data file not found. Please run the data fetching first.")
+        #return None
+
+    match = sq.fetch_match_by_id(config.API_TOKEN, match_id)
+    if  not match.get("data") is None:
+        return match.get("data")["match"]
+    else:
+        return None
+
+    
 
 def save_raw_train(data):
     FOLDER = config.DATA_FOLDER
@@ -255,6 +278,27 @@ def main():
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
         print("=" * len(header))
+
+
+        # print("Predict outdrafted:")
+        # outdrafted = [8525472370, 8525471980, 8525470811, 8525469144, 8525468670, 8525467287, 8525465350, 8525465318, 8525465043, 8525464780, 8525464467, 8525463616, 8525462314, 8525461911, 8525461532, 8525461148, 8525459189, 8525458326, 8525458067, 8525456980, 8525456718, 8525455938, 8525455872, 8525455641, 8525455585, 8525455277]
+        # for m_id in outdrafted:
+        #     prob = logRegPredictor.predict_by_match_id(m_id)
+        #     print(f"Predicting: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
+        #     print(f"Actual outcome: ", end="")
+        #     match = get_match_by_id(m_id)
+        #     if(match and not match.get("didRadiantWin") is None):
+        #         if match.get("didRadiantWin"):
+        #            print("Radiant W")
+        #         else:
+        #             print("Radiant L")
+
+        m_id = 8525383837
+        print(f"Precict match {m_id}")
+        prob = logRegPredictor.predict_by_match_id(m_id)
+        print(f"Predicting: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
+
+            
 
     if args.train_rbf:
         try:
