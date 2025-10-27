@@ -2,6 +2,7 @@ import numpy as np
 import os
 import json
 
+import DotaPredictor
 import config
 
 def getWinrateWith(hero1, hero2, all_stats):
@@ -78,4 +79,15 @@ def predict(feature_vector, all_stats):
     final_prediction = (avg_wr_with + avg_wr_against) / 2.0
     return final_prediction
 
-    
+def predict_by_match_id(m_id):
+    try:
+        with open(os.path.join("data", "all_hero_stats.json"), "r") as f:
+            all_stats = json.load(f)
+    except IOError as e:
+        print(f"Could not access hero stats file: {e}")
+        print("Try fetching hero stats from stratz using --update")
+        exit(1)
+    match = DotaPredictor.get_match_by_id(m_id)
+    feature_vector = DotaPredictor.generate_feature_vector(match)
+    return predict(feature_vector, all_stats)
+

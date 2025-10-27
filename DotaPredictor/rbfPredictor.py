@@ -7,32 +7,39 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 import config
+import DotaPredictor
 
-# param_grid = {
-#     'C': [0.1, 1, 10, 100],
-#     'gamma': [0.01, 0.1, 1, 10, 100]
-# }
+param_grid = {
+    'C': [0.25, 0.5, 1, 2, 3],
+    'gamma': [0.05, 0.1, 0.2, 0.3, 0.5]
+}
 
 rbfModel = svm.SVC(kernel='rbf', probability=True, C=1, gamma=0.1)
 
-def train_rbf(X_train, y_train):
+def find_best_params():
+    param_grid = {
+        'C': [0.25, 0.5, 1, 2, 3],
+        'gamma': [0.05, 0.1, 0.2, 0.3, 0.5]
+    }
+    cv = StratifiedKFold(n_splits=4, shuffle=True, random_state=42)
+
+    grid = GridSearchCV(
+        estimator=rbfModel,
+        param_grid=param_grid,
+        cv=cv,
+        scoring='f1',  
+        n_jobs=6,           
+        verbose=3
+    )
+    grid.fit(X_train, y_train)
+
+    params = grid.best_params_
+    rbfModel = grid.best_estimator_
+    print("Best rbf parameters:", params)
+    return params
+
+def train_rbf(X_train, y_train, C=0.25, gamma=0.2):
     global rbfModel
-
-    # cv = StratifiedKFold(n_splits=4, shuffle=True, random_state=42)
-
-    # grid = GridSearchCV(
-    #     estimator=rbfModel,
-    #     param_grid=param_grid,
-    #     cv=cv,
-    #     scoring='accuracy',  
-    #     n_jobs=6,           
-    #     verbose=3
-    # )
-    # grid.fit(X_train, y_train)
-    # rbfModel = grid.best_estimator_
-    # params = grid.best_params_
-    # print("Best rbf parameters:", params)
-
     rbfModel.fit(X_train, y_train)
 
 def predict_rbf(X):
@@ -48,11 +55,8 @@ def evaluate_rbf(X_test, y_test):
     return accuracy, cm
 
 def predict_by_match_id(match_id):
-    exit(1)
-    # TODO
-    try:
-        with open(f"{config.DATA_FOLDER}/raw_train.json", "r") as f:
-            matches = json.load(f)
-    except IOError:
-        print("Raw training data not found. Please run the data fetching script first.")
-        return None
+    match = DotaPredictor.get_match_by_id(match_id)
+    X = DotaPredictor.generate_feature_vector(match)
+    return predict_proba_rbf([X])[0]
+    print(f"Match id {match_id} not found in data")
+    return None

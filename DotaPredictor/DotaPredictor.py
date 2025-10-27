@@ -2,7 +2,10 @@ import argparse
 from ast import parse
 import random
 import re
+from typing import Required
+from urllib import request
 import numpy as np
+import algPredictor
 import stratzQueries as sq
 import json
 import os
@@ -167,6 +170,16 @@ def clean_train():
 
     print(f"Clean training dataset saved to {PATH}")
 
+def predict_by_id(m_id):
+    #m_id = 8525383837
+    print(f"Precict match {m_id}")
+    prob = rbfPredictor.predict_by_match_id(m_id)
+    print(f"RBF: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
+    prob = logRegPredictor.predict_by_match_id(m_id)
+    print(f"LogReg: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
+    prob = algPredictor.predict_by_match_id(m_id)
+    print(f"Stats: {m_id} -> Radiant Win with {(prob * 100):.4f}%")
+    print()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -213,6 +226,12 @@ def main():
         action="store_true",
         required=False,
         help="Train RBF SVM model on training dataset",)
+
+    parser.add_argument(
+        "--predict",
+        type=int,
+        required=False,
+        help="Predict match outcome by match ID using all models",)
 
     args = parser.parse_args()
 
@@ -278,6 +297,7 @@ def main():
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
         print("=" * len(header))
+        print()
 
 
         # print("Predict outdrafted:")
@@ -292,11 +312,6 @@ def main():
         #            print("Radiant W")
         #         else:
         #             print("Radiant L")
-
-        m_id = 8525383837
-        print(f"Precict match {m_id}")
-        prob = logRegPredictor.predict_by_match_id(m_id)
-        print(f"Predicting: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
 
             
 
@@ -334,26 +349,6 @@ def main():
 
     if args.test_alg_predict:
         from algPredictor import predict
-        # # Example feature vector with 5 radiant and 5 dire heroes
-        # example_vector = np.zeros(config.MAX_HERO_ID + 1, dtype=int)
-        # # Radiant heroes Medusa(94), Vengeful Spirit(20), Meepo(82), Enigma(33), Elder Titan(103)
-        # example_vector[94] = 1
-        # example_vector[20] = 1
-        # example_vector[82] = 1
-        # example_vector[33] = 1
-        # example_vector[103] = 1
-        # # Dire heroes Bloodseeker(4), Beastmaster(38), Doom(69), Batrider(65), Kez(145)
-        # example_vector[4] = -1
-        # example_vector[38] = -1
-        # example_vector[69] = -1
-        # example_vector[65] = -1
-        # example_vector[145] = -1
-        # try:
-        #     win_prob = predict(example_vector)
-        #     print(f"Predicted Radiant win probability: {win_prob:.2f}")
-        # except Exception as e:
-        #     print(f"Error during prediction: {e}")
-
         try:
             with open(os.path.join(config.DATA_FOLDER, "clean_train.json")) as f:
                 data = json.load(f)
@@ -434,5 +429,9 @@ def main():
 
         print("HIghly Outdrafted Matches:", outdrafted)
         print("=" * len(header))
+
+    if args.predict:
+        predict_by_id(args.predict)
+
 if __name__ == "__main__":
     main()
