@@ -11,9 +11,9 @@
     <OutputPath>.</OutputPath>
     <Name>DotaPredictor</Name>
     <RootNamespace>DotaPredictor</RootNamespace>
-    <InterpreterId>MSBuild|DotaPredictorEnv|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>--filter --train_logreg --train_rbf --test_alg_predict --stratz  ./data/token </CommandLineArguments>
+    <CommandLineArguments>--filter --test_alg_predict --stratz  ./data/token --test_prob_acc --train_mlp --train_logreg -fetch_train</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -29,6 +29,7 @@
     <Compile Include="config.py" />
     <Compile Include="DotaPredictor.py" />
     <Compile Include="logRegPredictor.py" />
+    <Compile Include="mlpPredictor.py" />
     <Compile Include="stratzQueries.py" />
     <Compile Include="rbfPredictor.py" />
   </ItemGroup>

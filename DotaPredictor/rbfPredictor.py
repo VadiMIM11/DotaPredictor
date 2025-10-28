@@ -1,6 +1,4 @@
-from math import e, gamma
 import numpy as np
-#import pandas as pd
 import json
 from sklearn import svm
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -10,8 +8,7 @@ import config
 import DotaPredictor
 
 
-rbfModel = svm.SVC(kernel='rbf', probability=True)
-
+rbfModel = svm.SVC(kernel='rbf', probability=True, random_state=config.RANDOM_STATE,  C=1, gamma=0.1)
 def find_best_params():
     param_grid = {
         'C': [0.25, 0.5, 1, 2, 3],
@@ -36,8 +33,10 @@ def find_best_params():
 
 def train_rbf(X_train, y_train, C=1, gamma=0.1):
     global rbfModel
-    rbfModel = svm.SVC(kernel='rbf', probability=True, C=C, gamma=gamma)
+
+    rbfModel = svm.SVC(kernel='rbf', probability=True, C=C, gamma=gamma, random_state=config.RANDOM_STATE)
     rbfModel.fit(X_train, y_train)
+
 
 def predict_rbf(X):
     return rbfModel.predict(X)

@@ -15,11 +15,14 @@ from tqdm import tqdm
 import config
 import logRegPredictor
 import rbfPredictor
+import mlpPredictor
+
 
 def extract_hero_ids(feature_vector):
     radiant_heroes = [i for i, val in enumerate(feature_vector) if val == 1]
     dire_heroes = [i for i, val in enumerate(feature_vector) if val == -1]
     return radiant_heroes, dire_heroes
+
 
 def generate_feature_vector(match_json):
     feture_vector = np.zeros(config.MAX_HERO_ID + 1, dtype=int)
@@ -37,6 +40,7 @@ def generate_feature_vector(match_json):
             feture_vector[hero_id] = 1 if pick["isRadiant"] else -1
     return feture_vector
 
+
 def get_label(match_json):
     if match_json.get("didRadiantWin") is None:
         print("No match result in match:", match_json["id"])
@@ -46,6 +50,7 @@ def get_label(match_json):
         return 1
     else:
         return -1
+
 
 def generate_treining_set(matches_json):
     matches = matches_json.get("data")
@@ -59,6 +64,7 @@ def generate_treining_set(matches_json):
     X = np.array(X_list)
     y = np.array(y_list)
     return X, y
+
 
 def update_local_stats(api_token):
     print("Updating local hero statistics dataset via stratz.com requests...")
@@ -79,10 +85,11 @@ def update_local_stats(api_token):
 
     num_fetched = len(stats.get("data", {}).get("heroStats", {}))
     print(f"Fetched stats for {num_fetched} heroes")
-    if(num_fetched != config.NUM_HEROES):
+    if num_fetched != config.NUM_HEROES:
         print(f"Warning: Expected {config.NUM_HEROES} heroes, but got {num_fetched}.")
 
     print(f"Local hero stats dataset updated and saved to {PATH}")
+
 
 def get_match_by_id(match_id):
     try:
@@ -98,15 +105,14 @@ def get_match_by_id(match_id):
                 return match
     except IOError:
         print("Data file not found. Please run the data fetching first.")
-        #return None
+        # return None
 
     match = sq.fetch_match_by_id(config.API_TOKEN, match_id)
-    if  not match.get("data") is None:
+    if not match.get("data") is None:
         return match.get("data")["match"]
     else:
         return None
 
-    
 
 def save_raw_train(data):
     FOLDER = config.DATA_FOLDER
@@ -170,8 +176,9 @@ def clean_train():
 
     print(f"Clean training dataset saved to {PATH}")
 
+
 def predict_by_id(m_id):
-    #m_id = 8525383837
+    # m_id = 8525383837
     print(f"Precict match {m_id}")
     prob = rbfPredictor.predict_by_match_id(m_id)
     print(f"RBF: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
@@ -180,6 +187,7 @@ def predict_by_id(m_id):
     prob = algPredictor.predict_by_match_id(m_id)
     print(f"Stats: {m_id} -> Radiant Win with {(prob * 100):.4f}%")
     print()
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -194,7 +202,10 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--stratz", type=str, help="Set path to file with stratz.com API token", required=False
+        "--stratz",
+        type=str,
+        help="Set path to file with stratz.com API token",
+        required=False,
     )
     parser.add_argument(
         "--fetch_train",
@@ -213,25 +224,42 @@ def main():
         action="store_true",
         required=False,
         help="Test algebraic predictor on training dataset",
-        )
+    )
 
     parser.add_argument(
         "--train_logreg",
         action="store_true",
         required=False,
-        help="Train logistic regression model on training dataset",)
+        help="Train logistic regression model on training dataset",
+    )
 
     parser.add_argument(
         "--train_rbf",
         action="store_true",
         required=False,
-        help="Train RBF SVM model on training dataset",)
+        help="Train RBF SVM model on training dataset",
+    )
 
     parser.add_argument(
         "--predict",
         type=int,
         required=False,
-        help="Predict match outcome by match ID using all models",)
+        help="Predict match outcome by match ID using all models",
+    )
+
+    parser.add_argument(
+        "--test_prob_acc",
+        action="store_true",
+        required=False,
+        help="Test probability accuracy of models on training dataset",
+    )
+
+    parser.add_argument(
+        "--train_mlp",
+        action="store_true",
+        required=False,
+        help="Train MLP model on training dataset",
+    )
 
     args = parser.parse_args()
 
@@ -268,16 +296,41 @@ def main():
     if args.filter:
         clean_train()
 
-    if args.train_logreg:
+    def get_confidence_accuracy(probas, y_test, confidence_threshold):
+        hit = 0
+        miss = 0
+        for i in range(len(probas)):
+            predicted_prob = probas[i][1]
+            predicted = 1 if predicted_prob >= 0.5 else -1
+            actual = y_test[i]
+            if abs(0.5 - predicted_prob) >= confidence_threshold:
+                if actual == predicted:
+                    hit += 1
+                else:
+                    miss += 1
+        accuracy = hit / (hit + miss) if (hit + miss) > 0 else 0
+        count = hit + miss
+        return count, accuracy
+
+    global X_train, X_test, y_train, y_test
+
+    if args.train_rbf or args.train_logreg or args.train_mlp:
         try:
             with open(os.path.join(config.DATA_FOLDER, "clean_train.json")) as f:
                 data = json.load(f)
         except:
-            print("Could not access clean training data file. Please run with --filter first.")
+            print(
+                "Could not access clean training data file. Please run with --filter first."
+            )
             return
 
+        global X_train, X_test, y_train, y_test
         X, y = generate_treining_set(data)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=config.RANDOM_STATE)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.25, random_state=config.RANDOM_STATE
+        )
+
+    if args.train_logreg:
         logRegPredictor.train_logreg(X_train, y_train)
         print()
         header = "="*5 + " Logistic Regression Predictor " + "="*5
@@ -285,11 +338,11 @@ def main():
         print("Total matches to test:", y_test.size)
         print()
         accuracy, cm = logRegPredictor.evaluate_logreg(X_test, y_test)
-        print(f"Logistic Regression Model Accuracy: {accuracy:.4f}")
-        print("True Negatives:", cm[0][0])
-        print("False Positives:", cm[0][1])
-        print("False Negatives:", cm[1][0])
-        print("True Positives:", cm[1][1])
+        print(f"Accuracy: {accuracy:.4f}")
+        # print("True Negatives:", cm[0][0])
+        # print("False Positives:", cm[0][1])
+        # print("False Negatives:", cm[1][0])
+        # print("True Positives:", cm[1][1])
         precision = cm[1][1] / (cm[1][1] + cm[0][1]) if (cm[1][1] + cm[0][1]) > 0 else 0 # Precision TP / (TP + FP)
         sensitivity = cm[1][1] / (cm[1][1] + cm[1][0]) if (cm[1][1] + cm[1][0]) > 0 else 0 # Sensitivity (Recall) TP / (TP + FN)
         specificity = cm[0][0] / (cm[0][0] + cm[0][1]) if (cm[0][0] + cm[0][1]) > 0 else 0 # Specificity TN / (TN + FP)
@@ -298,32 +351,9 @@ def main():
         print(f"Specificity: {specificity:.4f}")
         print("=" * len(header))
         print()
-
-
-        # print("Predict outdrafted:")
-        # outdrafted = [8525472370, 8525471980, 8525470811, 8525469144, 8525468670, 8525467287, 8525465350, 8525465318, 8525465043, 8525464780, 8525464467, 8525463616, 8525462314, 8525461911, 8525461532, 8525461148, 8525459189, 8525458326, 8525458067, 8525456980, 8525456718, 8525455938, 8525455872, 8525455641, 8525455585, 8525455277]
-        # for m_id in outdrafted:
-        #     prob = logRegPredictor.predict_by_match_id(m_id)
-        #     print(f"Predicting: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
-        #     print(f"Actual outcome: ", end="")
-        #     match = get_match_by_id(m_id)
-        #     if(match and not match.get("didRadiantWin") is None):
-        #         if match.get("didRadiantWin"):
-        #            print("Radiant W")
-        #         else:
-        #             print("Radiant L")
-
-            
+        
 
     if args.train_rbf:
-        try:
-            with open(os.path.join(config.DATA_FOLDER, "clean_train.json")) as f:
-                data = json.load(f)
-        except:
-            print("Could not access clean training data file. Please run with --filter first.")
-            return
-        X, y = generate_treining_set(data)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=config.RANDOM_STATE)
         print("Training RBF SVM Predictor...")
         rbfPredictor.train_rbf(X_train, y_train)
         print("Done training!")
@@ -333,11 +363,11 @@ def main():
         print("Total matches to test:", y_test.size)
         print()
         accuracy, cm = rbfPredictor.evaluate_rbf(X_test, y_test)
-        print(f"RBF SVM Model Accuracy: {accuracy:.4f}")
-        print("True Negatives:", cm[0][0])
-        print("False Positives:", cm[0][1])
-        print("False Negatives:", cm[1][0])
-        print("True Positives:", cm[1][1])
+        print(f"Accuracy: {accuracy:.4f}")
+        # print("True Negatives:", cm[0][0])
+        # print("False Positives:", cm[0][1])
+        # print("False Negatives:", cm[1][0])
+        # print("True Positives:", cm[1][1])
         precision = cm[1][1] / (cm[1][1] + cm[0][1]) if (cm[1][1] + cm[0][1]) > 0 else 0
         sensitivity = cm[1][1] / (cm[1][1] + cm[1][0]) if (cm[1][1] + cm[1][0]) > 0 else 0
         specificity = cm[0][0] / (cm[0][0] + cm[0][1]) if (cm[0][0] + cm[0][1]) > 0 else 0
@@ -346,9 +376,37 @@ def main():
         print(f"Specificity: {specificity:.4f}")
         print("=" * len(header))
 
+    if args.train_mlp:
+        print("Training MLP Predictor...")
+        mlpPredictor.train_mlp(X_train, y_train)
+        print("Done training!")
+        print()
+        header = "=" * 5 + " MLP Predictor " + "=" * 5
+        print(header)
+        print("Total matches to test:", y_test.size)
+        print()
+        accuracy, cm = logRegPredictor.evaluate_logreg(X_test, y_test)
+        print(f"Accuracy: {accuracy:.4f}")
+        # print("True Negatives:", cm[0][0])
+        # print("False Positives:", cm[0][1])
+        # print("False Negatives:", cm[1][0])
+        # print("True Positives:", cm[1][1])
+        precision = cm[1][1] / (cm[1][1] + cm[0][1]) if (cm[1][1] + cm[0][1]) > 0 else 0
+        sensitivity = (
+            cm[1][1] / (cm[1][1] + cm[1][0]) if (cm[1][1] + cm[1][0]) > 0 else 0
+        )
+        specificity = (
+            cm[0][0] / (cm[0][0] + cm[0][1]) if (cm[0][0] + cm[0][1]) > 0 else 0
+        )
+        print(f"Precision: {precision:.4f}")
+        print(f"Sensitivity (Recall): {sensitivity:.4f}")
+        print(f"Specificity: {specificity:.4f}")
+        print("=" * len(header))
+        print()
 
     if args.test_alg_predict:
         from algPredictor import predict
+
         try:
             with open(os.path.join(config.DATA_FOLDER, "clean_train.json")) as f:
                 data = json.load(f)
@@ -364,7 +422,7 @@ def main():
             exit(1)
 
         print()
-        header = "="*5 + " Statistical Prediictor " + "="*5
+        header = "=" * 5 + " Statistical Prediictor " + "=" * 5
         print(header)
         matches = data["data"]
         total_matches = len(matches)
@@ -412,26 +470,97 @@ def main():
                 print(f"Error processing match {match_key}: {e}")
                 continue
         print()
-        #print(f"Total predictions made: {total_predictions}")
-        print(f"Correct predictions: {correct_predictions}")
-        print(f"True Positives: {true_positive_count}")
-        print(f"False Positives: {false_positive_count}")
-        print(f"True Negatives: {true_negative_count}")
-        print(f"False Negatives: {false_negative_count}")
-        accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0
-        precision = true_positive_count / (true_positive_count + false_positive_count) if (true_positive_count + false_positive_count) > 0 else 0 # Precision TP / (TP + FP)
-        sensitivity = true_positive_count / (true_positive_count + false_negative_count) if (true_positive_count + false_negative_count) > 0 else 0 # Sensitivity (Recall) TP / (TP + FN)
-        specificity = true_negative_count / (true_negative_count + false_positive_count) if (true_negative_count + false_positive_count) > 0 else 0 # Specificity TN / (TN + FP)
+        # print(f"Total predictions made: {total_predictions}")
+        # print(f"Correct predictions: {correct_predictions}")
+        # print(f"True Positives: {true_positive_count}")
+        # print(f"False Positives: {false_positive_count}")
+        # print(f"True Negatives: {true_negative_count}")
+        # print(f"False Negatives: {false_negative_count}")
+        accuracy = (
+            correct_predictions / total_predictions if total_predictions > 0 else 0
+        )
+        precision = (
+            true_positive_count / (true_positive_count + false_positive_count)
+            if (true_positive_count + false_positive_count) > 0
+            else 0
+        )  # Precision TP / (TP + FP)
+        sensitivity = (
+            true_positive_count / (true_positive_count + false_negative_count)
+            if (true_positive_count + false_negative_count) > 0
+            else 0
+        )  # Sensitivity (Recall) TP / (TP + FN)
+        specificity = (
+            true_negative_count / (true_negative_count + false_positive_count)
+            if (true_negative_count + false_positive_count) > 0
+            else 0
+        )  # Specificity TN / (TN + FP)
         print(f"Accuracy: {accuracy:.4f}")
         print(f"Precision: {precision:.4f}")
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
 
-        print("HIghly Outdrafted Matches:", outdrafted)
+        # print("HIghly Outdrafted Matches:", outdrafted)
         print("=" * len(header))
+        print()
+
+    if args.test_prob_acc:
+        header = "=" * 5 + " Probability Accuracy Test " + "=" * 5
+        print(header)
+        if args.train_logreg:
+            print("Logistic Regression Predictor:")
+            # logRegPredictor.train_logreg(X_train, y_train)
+            logreg_probas = logRegPredictor.predict_proba_logreg(X_test)
+
+            count50, logreg50 = get_confidence_accuracy(logreg_probas, y_test, 0.00)
+            count55, logreg55 = get_confidence_accuracy(logreg_probas, y_test, 0.05)
+            count60, logreg60 = get_confidence_accuracy(logreg_probas, y_test, 0.10)
+            count65, logreg65 = get_confidence_accuracy(logreg_probas, y_test, 0.15)
+            print(
+                f"LogReg accuracy with >=50% confidence: {logreg50*100:.4f}% count: {count50}"
+            )
+            print(
+                f"LogReg accuracy with >=55% confidence: {logreg55*100:.4f}% count: {count55}"
+            )
+            print(
+                f"LogReg accuracy with >=60% confidence: {logreg60*100:.4f}% count: {count60}"
+            )
+            print(
+                f"LogReg accuracy with >=65% confidence: {logreg65*100:.4f}% count: {count65}"
+            )
+            print()
+        if args.train_rbf:
+            print("RBF SVM Predictor:")
+            # print("Training RBF SVC Predictor...")
+            # rbfPredictor.train_rbf(X_train, y_train)
+            rbf_probas = rbfPredictor.predict_proba_rbf(X_test)
+            count50, rbf50 = get_confidence_accuracy(rbf_probas, y_test, 0.00)
+            count55, rbf55 = get_confidence_accuracy(rbf_probas, y_test, 0.05)
+            count60, rbf60 = get_confidence_accuracy(rbf_probas, y_test, 0.10)
+            count65, rbf65 = get_confidence_accuracy(rbf_probas, y_test, 0.15)
+            print(f"RBF accuracy with >=50% confidence: {rbf50*100:.4f}% count: {count50}")
+            print(f"RBF accuracy with >=55% confidence: {rbf55*100:.4f}% count: {count55}")
+            print(f"RBF accuracy with >=60% confidence: {rbf60*100:.4f}% count: {count60}")
+            print(f"RBF accuracy with >=65% confidence: {rbf65*100:.4f}% count: {count65}")
+            print()
+        if args.train_mlp:
+            print("MLP Predictor:")
+            # print("Training MLP Predictor...")
+            # mlpPredictor.train_mlp(X_train, y_train)
+            mlp_probas = mlpPredictor.predict_proba_mlp(X_test)
+            count50, mlp50 = get_confidence_accuracy(mlp_probas, y_test, 0.00)
+            count55, mlp55 = get_confidence_accuracy(mlp_probas, y_test, 0.05)
+            count60, mlp60 = get_confidence_accuracy(mlp_probas, y_test, 0.10)
+            count65, mlp65 = get_confidence_accuracy(mlp_probas, y_test, 0.15)
+            print(f"MLP accuracy with >=50% confidence: {mlp50*100:.4f}% count: {count50}")
+            print(f"MLP accuracy with >=55% confidence: {mlp55*100:.4f}% count: {count55}")
+            print(f"MLP accuracy with >=60% confidence: {mlp60*100:.4f}% count: {count60}")
+            print(f"MLP accuracy with >=65% confidence: {mlp65*100:.4f}% count: {count65}")
+        print("=" * len(header))
+        print()
 
     if args.predict:
         predict_by_id(args.predict)
+
 
 if __name__ == "__main__":
     main()
