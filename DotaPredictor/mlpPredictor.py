@@ -12,8 +12,8 @@ import DotaPredictor
 
 import config
 
-mlpModel = MLPClassifier(hidden_layer_sizes=(1024, 512, 256, 128), activation='relu', solver='adam', max_iter=500, shuffle=True, early_stopping=True, random_state=config.RANDOM_STATE)
-baggingModel = BaggingClassifier(mlpModel, n_estimators=10, random_state=config.RANDOM_STATE, verbose=2, n_jobs=6)
+baggingModel = MLPClassifier(hidden_layer_sizes=(1024, 512, 256, 128), activation='relu', solver='adam', max_iter=500, early_stopping=True, validation_fraction=0.1, random_state=config.RANDOM_STATE)
+#baggingModel = BaggingClassifier(mlpModel, n_estimators=10, random_state=config.RANDOM_STATE, verbose=2, n_jobs=10)
 
 def train_mlp(X_train, y_train):
     global mlpModel

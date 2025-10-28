@@ -375,6 +375,7 @@ def main():
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
         print("=" * len(header))
+        print()
 
     if args.train_mlp:
         print("Training MLP Predictor...")
