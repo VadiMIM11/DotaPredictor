@@ -5,18 +5,26 @@ import json
 import DotaPredictor
 import config
 
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def logit(p):
+    if np.any((p <= 0) | (p >= 1)):  # Ensure p is in (0, 1) interval
+        raise ValueError("Input probabilities must be between 0 and 1")
+    return np.log(p / (1 - p))
+
 def getWinrateWith(hero1, hero2, all_stats):
     hero1_matchups = all_stats["data"]["heroStats"].get(f"hero{hero1}MatchUp")
     if not hero1_matchups:
         print(f"No data for hero {hero1}")
         exit(1)
     if hero1 == hero2:
-        return hero1_matchups[0]["winRate"]
+        return logit(hero1_matchups[0]["winRate"])
     for entry in hero1_matchups:
         if entry["heroId"] == hero1:
             for with_entry in entry["with"]:
                 if with_entry["heroId2"] == hero2:
-                    return with_entry["winsAverage"]
+                    return logit(with_entry["winsAverage"])
         else:
             print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}")
             exit(1)
@@ -30,7 +38,7 @@ def getWinrateAgainst(hero1, hero2, all_stats):
         if entry["heroId"] == hero1:
             for with_entry in entry["vs"]:
                 if with_entry["heroId2"] == hero2:
-                    return with_entry["winsAverage"]
+                    return logit(with_entry["winsAverage"])
         else:
             print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}")
             exit(1)
@@ -76,7 +84,7 @@ def predict(feature_vector, all_stats):
         raise Exception("No against data found")
     avg_wr_against = wr_against_sum / countAgainst
 
-    final_prediction = (avg_wr_with + avg_wr_against) / 2.0
+    final_prediction = sigmoid((avg_wr_with + avg_wr_against) / 2.0)
     return final_prediction
 
 def predict_by_match_id(m_id):

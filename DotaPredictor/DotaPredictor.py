@@ -261,6 +261,12 @@ def main():
         help="Train MLP model on training dataset",
     )
 
+    parser.add_argument(
+        "--generate_train",
+        action="store_true",
+        required=False,
+        help="Generate training and testing sets from clean_train.json",)
+
     args = parser.parse_args()
 
     if args.stratz:
@@ -293,6 +299,7 @@ def main():
         json_data = sq.fetch_train(config.API_TOKEN)
         save_raw_train(json_data)
 
+
     if args.filter:
         clean_train()
 
@@ -314,7 +321,7 @@ def main():
 
     global X_train, X_test, y_train, y_test
 
-    if args.train_rbf or args.train_logreg or args.train_mlp:
+    if args.train_rbf or args.train_logreg or args.train_mlp or args.generate_train:
         try:
             with open(os.path.join(config.DATA_FOLDER, "clean_train.json")) as f:
                 data = json.load(f)
@@ -386,7 +393,7 @@ def main():
         print(header)
         print("Total matches to test:", y_test.size)
         print()
-        accuracy, cm = logRegPredictor.evaluate_logreg(X_test, y_test)
+        accuracy, cm = mlpPredictor.evaluate_mlp(X_test, y_test)
         print(f"Accuracy: {accuracy:.4f}")
         # print("True Negatives:", cm[0][0])
         # print("False Positives:", cm[0][1])
@@ -507,6 +514,39 @@ def main():
     if args.test_prob_acc:
         header = "=" * 5 + " Probability Accuracy Test " + "=" * 5
         print(header)
+
+        print("Statistical Predictor:")
+        try:
+            with open(os.path.join("data", "all_hero_stats.json"), "r") as f:
+                all_stats = json.load(f)
+        except IOError as e:
+            print(f"Could not access hero stats file: {e}")
+            print("Try fetching hero stats from stratz using --update")
+            exit(1)
+
+        stats_probs = []
+        for i in range(len(X_test)):
+            prob = algPredictor.predict(X_test[i], all_stats)
+            stats_probs.append([1 - prob, prob])
+
+        count50, stats50 = get_confidence_accuracy(stats_probs, y_test, 0.00)
+        count55, stats55 = get_confidence_accuracy(stats_probs, y_test, 0.05)
+        count60, stats60 = get_confidence_accuracy(stats_probs, y_test, 0.10)
+        count65, stats65 = get_confidence_accuracy(stats_probs, y_test, 0.15)
+        print(
+            f"Stats accuracy with >=50% confidence: {stats50*100:.4f}% count: {count50}"
+        )
+        print(
+            f"Stats accuracy with >=55% confidence: {stats55*100:.4f}% count: {count55}"
+        )
+        print(
+            f"Stats accuracy with >=60% confidence: {stats60*100:.4f}% count: {count60}"
+        )
+        print(
+            f"Stats accuracy with >=65% confidence: {stats65*100:.4f}% count: {count65}"
+        )
+        print()
+
         if args.train_logreg:
             print("Logistic Regression Predictor:")
             # logRegPredictor.train_logreg(X_train, y_train)
