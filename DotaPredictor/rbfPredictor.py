@@ -8,7 +8,7 @@ import config
 import DotaPredictor
 
 
-rbfModel = svm.SVC(kernel='rbf', probability=True, random_state=config.RANDOM_STATE,  C=1, gamma=0.1)
+model = svm.SVC(kernel='rbf', probability=True, random_state=config.RANDOM_STATE,  C=1, gamma=0.1)
 def find_best_params():
     param_grid = {
         'C': [0.25, 0.5, 1, 2, 3],
@@ -31,21 +31,21 @@ def find_best_params():
     print("Best rbf parameters:", params)
     return params
 
-def train_rbf(X_train, y_train, C=1, gamma=0.1):
-    global rbfModel
+def train(X_train, y_train, C=1, gamma=0.1):
+    global model
 
-    rbfModel = svm.SVC(kernel='rbf', probability=True, C=C, gamma=gamma, random_state=config.RANDOM_STATE)
-    rbfModel.fit(X_train, y_train)
+    model = svm.SVC(kernel='rbf', probability=True, C=C, gamma=gamma, random_state=config.RANDOM_STATE)
+    model.fit(X_train, y_train)
 
 
-def predict_rbf(X):
-    return rbfModel.predict(X)
+def predict(X):
+    return model.predict(X)
 
-def predict_proba_rbf(X):
-    return rbfModel.predict_proba(X)
+def predict_proba(X):
+    return model.predict_proba(X)
 
-def evaluate_rbf(X_test, y_test):
-    y_pred = rbfModel.predict(X_test)
+def evaluate(X_test, y_test):
+    y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
     cm = confusion_matrix(y_test, y_pred)
     return accuracy, cm
@@ -53,6 +53,6 @@ def evaluate_rbf(X_test, y_test):
 def predict_by_match_id(match_id):
     match = DotaPredictor.get_match_by_id(match_id)
     X = DotaPredictor.generate_feature_vector(match)
-    return predict_proba_rbf([X])[0]
+    return predict_proba([X])[0]
     print(f"Match id {match_id} not found in data")
     return None

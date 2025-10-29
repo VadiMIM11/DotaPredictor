@@ -338,13 +338,13 @@ def main():
         )
 
     if args.train_logreg:
-        logRegPredictor.train_logreg(X_train, y_train)
+        logRegPredictor.train(X_train, y_train)
         print()
         header = "="*5 + " Logistic Regression Predictor " + "="*5
         print(header)
         print("Total matches to test:", y_test.size)
         print()
-        accuracy, cm = logRegPredictor.evaluate_logreg(X_test, y_test)
+        accuracy, cm = logRegPredictor.evaluate(X_test, y_test)
         print(f"Accuracy: {accuracy:.4f}")
         # print("True Negatives:", cm[0][0])
         # print("False Positives:", cm[0][1])
@@ -362,14 +362,14 @@ def main():
 
     if args.train_rbf:
         print("Training RBF SVM Predictor...")
-        rbfPredictor.train_rbf(X_train, y_train)
+        rbfPredictor.train(X_train, y_train)
         print("Done training!")
         print()
         header = "="*5 + " RBF SVM Predictor " + "="*5
         print(header)
         print("Total matches to test:", y_test.size)
         print()
-        accuracy, cm = rbfPredictor.evaluate_rbf(X_test, y_test)
+        accuracy, cm = rbfPredictor.evaluate(X_test, y_test)
         print(f"Accuracy: {accuracy:.4f}")
         # print("True Negatives:", cm[0][0])
         # print("False Positives:", cm[0][1])
@@ -550,7 +550,7 @@ def main():
         if args.train_logreg:
             print("Logistic Regression Predictor:")
             # logRegPredictor.train_logreg(X_train, y_train)
-            logreg_probas = logRegPredictor.predict_proba_logreg(X_test)
+            logreg_probas = logRegPredictor.predict_proba(X_test)
 
             count50, logreg50 = get_confidence_accuracy(logreg_probas, y_test, 0.00)
             count55, logreg55 = get_confidence_accuracy(logreg_probas, y_test, 0.05)
@@ -573,7 +573,7 @@ def main():
             print("RBF SVM Predictor:")
             # print("Training RBF SVC Predictor...")
             # rbfPredictor.train_rbf(X_train, y_train)
-            rbf_probas = rbfPredictor.predict_proba_rbf(X_test)
+            rbf_probas = rbfPredictor.predict_proba(X_test)
             count50, rbf50 = get_confidence_accuracy(rbf_probas, y_test, 0.00)
             count55, rbf55 = get_confidence_accuracy(rbf_probas, y_test, 0.05)
             count60, rbf60 = get_confidence_accuracy(rbf_probas, y_test, 0.10)
