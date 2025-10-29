@@ -178,16 +178,6 @@ def clean_train():
     print(f"Clean training dataset saved to {PATH}")
 
 
-def predict_by_id(m_id):
-    # m_id = 8525383837
-    print(f"Precict match {m_id}")
-    prob = rbfPredictor.predict_by_match_id(m_id)
-    print(f"RBF: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
-    prob = logRegPredictor.predict_by_match_id(m_id)
-    print(f"LogReg: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
-    prob = algPredictor.predict_by_match_id(m_id)
-    print(f"Stats: {m_id} -> Radiant Win with {(prob * 100):.4f}%")
-    print()
 
 
 def main():
@@ -613,6 +603,25 @@ def main():
                 print_confidence_accuracy(0.5 + threshold, accuracy, count)
             print()
         print("=" * len(header))
+        print()
+
+    def predict_by_id(m_id):
+        # m_id = 8525383837
+        print(f"Precict match {m_id}")
+        if args.train_rbf:
+            prob = rbfPredictor.predict_by_match_id(m_id)
+            print(f"RBF: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
+        if args.train_mlp:
+            prob = mlpPredictor.predict_by_match_id(m_id)
+            print(f"MLP: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
+        if args.train_tree:
+            prob = treePredictor.predict_by_match_id(m_id)
+            print(f"Tree: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
+        if args.train_logreg:
+            prob = logRegPredictor.predict_by_match_id(m_id)
+            print(f"LogReg: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%")
+        prob = algPredictor.predict_by_match_id(m_id)
+        print(f"Stats: {m_id} -> Radiant Win with {(prob * 100):.4f}%")
         print()
 
     if args.predict:
