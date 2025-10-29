@@ -16,6 +16,7 @@ import config
 import logRegPredictor
 import rbfPredictor
 import mlpPredictor
+import treePredictor
 
 
 def extract_hero_ids(feature_vector):
@@ -262,6 +263,12 @@ def main():
     )
 
     parser.add_argument(
+        "--train_tree",
+        action="store_true",
+        required=False,
+        help="Train Decision Tree model on training dataset",)
+
+    parser.add_argument(
         "--generate_train",
         action="store_true",
         required=False,
@@ -337,6 +344,27 @@ def main():
             X, y, test_size=0.25, random_state=config.RANDOM_STATE
         )
 
+    if args.train_tree:
+        print("Training Decision Tree Predictor...")
+        treePredictor.train(X_train, y_train)
+        print("Done training!")
+        print()
+        header = "="*5 + " Decision Tree Predictor " + "="*5
+        print(header)
+        print("Total matches to test:", y_test.size)
+        print()
+        accuracy, cm = treePredictor.evaluate(X_test, y_test)
+        print(f"Accuracy: {accuracy:.4f}")
+        precision = cm[1][1] / (cm[1][1] + cm[0][1]) if (cm[1][1] + cm[0][1]) > 0 else 0 # Precision TP / (TP + FP)
+        sensitivity = cm[1][1] / (cm[1][1] + cm[1][0]) if (cm[1][1] + cm[1][0]) > 0 else 0 # Sensitivity (Recall) TP / (TP + FN)
+        specificity = cm[0][0] / (cm[0][0] + cm[0][1]) if (cm[0][0] + cm[0][1]) > 0 else 0 # Specificity TN / (TN + FP)
+        print(f"Precision: {precision:.4f}")
+        print(f"Sensitivity (Recall): {sensitivity:.4f}")
+        print(f"Specificity: {specificity:.4f}")
+        print("=" * len(header))
+        print()
+
+
     if args.train_logreg:
         logRegPredictor.train(X_train, y_train)
         print()
@@ -386,14 +414,14 @@ def main():
 
     if args.train_mlp:
         print("Training MLP Predictor...")
-        mlpPredictor.train_mlp(X_train, y_train)
+        mlpPredictor.train(X_train, y_train)
         print("Done training!")
         print()
         header = "=" * 5 + " MLP Predictor " + "=" * 5
         print(header)
         print("Total matches to test:", y_test.size)
         print()
-        accuracy, cm = mlpPredictor.evaluate_mlp(X_test, y_test)
+        accuracy, cm = mlpPredictor.evaluate(X_test, y_test)
         print(f"Accuracy: {accuracy:.4f}")
         # print("True Negatives:", cm[0][0])
         # print("False Positives:", cm[0][1])
@@ -511,9 +539,13 @@ def main():
         print("=" * len(header))
         print()
 
+    def print_confidence_accuracy(confidence, accuracy, count):
+        print(f"Accuracy with >={confidence*100:.1f}%: {accuracy*100:.4f}% count: {count}")
+
     if args.test_prob_acc:
         header = "=" * 5 + " Probability Accuracy Test " + "=" * 5
         print(header)
+        print()
 
         print("Statistical Predictor:")
         try:
@@ -524,84 +556,69 @@ def main():
             print("Try fetching hero stats from stratz using --update")
             exit(1)
 
-        stats_probs = []
+        thresholds = [0.00, 0.05, 0.10, 0.15]
+
+        probas = []
         for i in range(len(X_test)):
             prob = algPredictor.predict(X_test[i], all_stats)
-            stats_probs.append([1 - prob, prob])
+            probas.append([1 - prob, prob])
 
-        count50, stats50 = get_confidence_accuracy(stats_probs, y_test, 0.00)
-        count55, stats55 = get_confidence_accuracy(stats_probs, y_test, 0.05)
-        count60, stats60 = get_confidence_accuracy(stats_probs, y_test, 0.10)
-        count65, stats65 = get_confidence_accuracy(stats_probs, y_test, 0.15)
-        print(
-            f"Stats accuracy with >=50% confidence: {stats50*100:.4f}% count: {count50}"
-        )
-        print(
-            f"Stats accuracy with >=55% confidence: {stats55*100:.4f}% count: {count55}"
-        )
-        print(
-            f"Stats accuracy with >=60% confidence: {stats60*100:.4f}% count: {count60}"
-        )
-        print(
-            f"Stats accuracy with >=65% confidence: {stats65*100:.4f}% count: {count65}"
-        )
+        for threshold in thresholds:
+            count, accuracy = get_confidence_accuracy(
+                probas, y_test, threshold
+            )
+            print_confidence_accuracy(0.5 + threshold, accuracy, count)
         print()
 
         if args.train_logreg:
             print("Logistic Regression Predictor:")
             # logRegPredictor.train_logreg(X_train, y_train)
-            logreg_probas = logRegPredictor.predict_proba(X_test)
-
-            count50, logreg50 = get_confidence_accuracy(logreg_probas, y_test, 0.00)
-            count55, logreg55 = get_confidence_accuracy(logreg_probas, y_test, 0.05)
-            count60, logreg60 = get_confidence_accuracy(logreg_probas, y_test, 0.10)
-            count65, logreg65 = get_confidence_accuracy(logreg_probas, y_test, 0.15)
-            print(
-                f"LogReg accuracy with >=50% confidence: {logreg50*100:.4f}% count: {count50}"
-            )
-            print(
-                f"LogReg accuracy with >=55% confidence: {logreg55*100:.4f}% count: {count55}"
-            )
-            print(
-                f"LogReg accuracy with >=60% confidence: {logreg60*100:.4f}% count: {count60}"
-            )
-            print(
-                f"LogReg accuracy with >=65% confidence: {logreg65*100:.4f}% count: {count65}"
-            )
+            probas = logRegPredictor.predict_proba(X_test)
+            for threshold in thresholds:
+                count, accuracy = get_confidence_accuracy(
+                    probas, y_test, threshold
+                )
+                print_confidence_accuracy(0.5 + threshold, accuracy, count)
             print()
         if args.train_rbf:
             print("RBF SVM Predictor:")
             # print("Training RBF SVC Predictor...")
             # rbfPredictor.train_rbf(X_train, y_train)
-            rbf_probas = rbfPredictor.predict_proba(X_test)
-            count50, rbf50 = get_confidence_accuracy(rbf_probas, y_test, 0.00)
-            count55, rbf55 = get_confidence_accuracy(rbf_probas, y_test, 0.05)
-            count60, rbf60 = get_confidence_accuracy(rbf_probas, y_test, 0.10)
-            count65, rbf65 = get_confidence_accuracy(rbf_probas, y_test, 0.15)
-            print(f"RBF accuracy with >=50% confidence: {rbf50*100:.4f}% count: {count50}")
-            print(f"RBF accuracy with >=55% confidence: {rbf55*100:.4f}% count: {count55}")
-            print(f"RBF accuracy with >=60% confidence: {rbf60*100:.4f}% count: {count60}")
-            print(f"RBF accuracy with >=65% confidence: {rbf65*100:.4f}% count: {count65}")
+            probas = rbfPredictor.predict_proba(X_test)
+            for threshold in thresholds:
+                count, accuracy = get_confidence_accuracy(
+                    probas, y_test, threshold
+                )
+                print_confidence_accuracy(0.5 + threshold, accuracy, count)
             print()
         if args.train_mlp:
             print("MLP Predictor:")
             # print("Training MLP Predictor...")
             # mlpPredictor.train_mlp(X_train, y_train)
-            mlp_probas = mlpPredictor.predict_proba_mlp(X_test)
-            count50, mlp50 = get_confidence_accuracy(mlp_probas, y_test, 0.00)
-            count55, mlp55 = get_confidence_accuracy(mlp_probas, y_test, 0.05)
-            count60, mlp60 = get_confidence_accuracy(mlp_probas, y_test, 0.10)
-            count65, mlp65 = get_confidence_accuracy(mlp_probas, y_test, 0.15)
-            print(f"MLP accuracy with >=50% confidence: {mlp50*100:.4f}% count: {count50}")
-            print(f"MLP accuracy with >=55% confidence: {mlp55*100:.4f}% count: {count55}")
-            print(f"MLP accuracy with >=60% confidence: {mlp60*100:.4f}% count: {count60}")
-            print(f"MLP accuracy with >=65% confidence: {mlp65*100:.4f}% count: {count65}")
+            probas = mlpPredictor.predict_proba(X_test)
+            for threshold in thresholds:
+                count, accuracy = get_confidence_accuracy(
+                    probas, y_test, threshold
+                )
+                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+            print()
+
+        if args.train_tree:
+            print("Decision Tree Predictor:")
+            probas = treePredictor.predict_proba(X_test)
+            for threshold in thresholds:
+                count, accuracy = get_confidence_accuracy(
+                    probas, y_test, threshold
+                )
+                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+            print()
         print("=" * len(header))
         print()
 
     if args.predict:
         predict_by_id(args.predict)
 
+ 
 
 if __name__ == "__main__":
     main()

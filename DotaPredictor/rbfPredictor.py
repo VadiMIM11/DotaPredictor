@@ -3,12 +3,15 @@ import json
 from sklearn import svm
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 import config
 import DotaPredictor
 
 
 model = svm.SVC(kernel='rbf', probability=True, random_state=config.RANDOM_STATE,  C=1, gamma=0.1)
+#model = CalibratedClassifierCV(svcModel, method='isotonic', cv=5)
+
 def find_best_params():
     param_grid = {
         'C': [0.25, 0.5, 1, 2, 3],
