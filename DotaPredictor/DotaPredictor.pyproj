@@ -11,11 +11,11 @@
     <OutputPath>.</OutputPath>
     <Name>DotaPredictor</Name>
     <RootNamespace>DotaPredictor</RootNamespace>
-    <InterpreterId>MSBuild|DotaPredictorEnv|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>--filter --test_alg_predict --stratz  ./data/token --test_prob_acc --generate_train  --train_logreg --train_tree --train_mlp --train_rbf</CommandLineArguments>
+    <CommandLineArguments>--filter --test_alg_predict --stratz  ./data/token --test_prob_acc --generate_train  --train_logreg --train_tree --train_mlp --train_rbf --predict 8534379488</CommandLineArguments>
     <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
-    <InterpreterPath>./DotaPredictorEnv/Scripts/python.exe</InterpreterPath>
+    <InterpreterPath>./env/Scripts/python.exe</InterpreterPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>

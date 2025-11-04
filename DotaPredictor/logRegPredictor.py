@@ -12,7 +12,6 @@ model = LogisticRegression(max_iter=200)
 def train(X_train, y_train):
     global model
     model.fit(X_train, y_train)
-    #print()
 
 def predict(X):
     return model.predict(X)
@@ -27,8 +26,6 @@ def evaluate(X_test, y_test):
     return accuracy, cm
 
 def predict_by_match_id(match_id):
-    #exit(1)
-    # TODO
     match = DotaPredictor.get_match_by_id(match_id)
     X = DotaPredictor.generate_feature_vector(match)
     return predict_proba([X])[0]

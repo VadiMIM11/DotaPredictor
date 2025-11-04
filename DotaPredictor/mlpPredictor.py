@@ -21,7 +21,6 @@ def train(X_train, y_train):
     global model
 
     model.fit(X_train, y_train)
-    #print()
 
 def predict(X):
     return model.predict(X)
@@ -29,7 +28,6 @@ def predict(X):
 def predict_proba(X):
     return model.predict_proba(X)
 
-# Evaluate model performance on a test set
 def evaluate(X_test, y_test):
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
@@ -37,8 +35,6 @@ def evaluate(X_test, y_test):
     return accuracy, cm
 
 def predict_by_match_id(match_id):
-    #exit(1)
-    # TODO
     match = DotaPredictor.get_match_by_id(match_id)
     X = DotaPredictor.generate_feature_vector(match)
     return predict_proba([X])[0]

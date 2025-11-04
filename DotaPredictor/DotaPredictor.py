@@ -30,14 +30,12 @@ def generate_feature_vector(match_json):
     if match_json.get("pickBans") is None:
         print("No pickBans in match:", match_json["id"])
         raise Exception("No pickBans in match")
-        exit(1)
     for pick in match_json["pickBans"]:
         if pick["isPick"] is True:
             hero_id = pick["heroId"]
             if hero_id < 1 or hero_id > config.MAX_HERO_ID:
                 print("Hero id out of range:", hero_id)
                 raise Exception("Hero id out of range")
-                exit(1)
             feture_vector[hero_id] = 1 if pick["isRadiant"] else -1
     return feture_vector
 
@@ -631,3 +629,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    input()
