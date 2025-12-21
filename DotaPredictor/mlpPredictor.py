@@ -8,19 +8,25 @@ from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.utils import resample
 
+from joblib import dump
+from joblib import load
 
 import DotaPredictor
-
 import config
 
 mlp_model = MLPClassifier(hidden_layer_sizes=(1024, 512, 256, 128), activation='relu', solver='adam', max_iter=500, early_stopping=True, validation_fraction=0.1, random_state=config.RANDOM_STATE)
 model = CalibratedClassifierCV(mlp_model, method='isotonic', cv=5)
+
+def load_model(path):
+    global model
+    model = load(path)
 
 def train(X_train, y_train):
     global mlpModel
     global model
 
     model.fit(X_train, y_train)
+    dump(model, 'mlp_model.joblib')
 
 def predict(X):
     return model.predict(X)

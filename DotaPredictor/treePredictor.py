@@ -9,6 +9,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 from sklearn.metrics import accuracy_score, confusion_matrix
 
+from joblib import dump
+from joblib import load
+
 import DotaPredictor
 import config
 
@@ -17,10 +20,14 @@ tree = DecisionTreeClassifier(max_depth=5, random_state=config.RANDOM_STATE)
 randomForest = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=config.RANDOM_STATE)
 model = CalibratedClassifierCV(randomForest, method='isotonic', cv=5)
 
+def load_model(path):
+    global model
+    model = load(path)
+
 def train(X_train, y_train):
     global model
-
     model.fit(X_train, y_train)
+    dump(model, 'tree_model.joblib')
 
 def predict(X):
     return model.predict(X)

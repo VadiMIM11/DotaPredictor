@@ -5,12 +5,18 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
+from joblib import dump
+from joblib import load
+
 import config
 import DotaPredictor
 
-
 model = svm.SVC(kernel='rbf', probability=True, random_state=config.RANDOM_STATE,  C=1, gamma=0.1)
 #model = CalibratedClassifierCV(svcModel, method='isotonic', cv=5)
+
+def load_model(path):
+    global model
+    model = load(path)
 
 def find_best_params():
     param_grid = {
@@ -39,6 +45,7 @@ def train(X_train, y_train, C=1, gamma=0.1):
 
     model = svm.SVC(kernel='rbf', probability=True, C=C, gamma=gamma, random_state=config.RANDOM_STATE)
     model.fit(X_train, y_train)
+    dump(model, 'rbf_model.joblib')
 
 
 def predict(X):

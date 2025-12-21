@@ -3,15 +3,23 @@ import json
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix
-import DotaPredictor
 
+from joblib import dump
+from joblib import load
+
+import DotaPredictor
 import config
 
 model = LogisticRegression(max_iter=200)
 
+def load_model(path):
+    global model
+    model = load(path)
+
 def train(X_train, y_train):
     global model
     model.fit(X_train, y_train)
+    dump(model, 'logReg_model.joblib')
 
 def predict(X):
     return model.predict(X)
