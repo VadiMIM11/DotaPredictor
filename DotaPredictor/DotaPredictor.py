@@ -622,7 +622,7 @@ def main():
 
     def print_confidence_accuracy(confidence, accuracy, count):
         print(
-            f"Accuracy with >={confidence*100:.1f}%: {accuracy*100:.4f}% count: {count}"
+            f"Confidence >={confidence*100:.1f}%: Accuracy: {accuracy*100:.4f}% count: {count}"
         )
 
     if args.test_calibration:
