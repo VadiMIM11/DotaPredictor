@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import json
 from sklearn import svm
@@ -45,7 +46,14 @@ def train(X_train, y_train, C=1, gamma=0.1):
 
     model = svm.SVC(kernel='rbf', probability=True, C=C, gamma=gamma, random_state=config.RANDOM_STATE)
     model.fit(X_train, y_train)
-    dump(model, 'rbf_model.joblib')
+
+    if not os.path.exists(config.MODELS_FOLDER):
+        os.makedirs(config.MODELS_FOLDER)
+        print(f"Created folder: {config.MODELS_FOLDER}")
+    model_path = os.path.join(config.MODELS_FOLDER, 'rbf_model.joblib')
+
+    dump(model, model_path)
+    print(f"Model saved in '{model_path}'")
 
 
 def predict(X):

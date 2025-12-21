@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import json
 from sklearn.model_selection import train_test_split
@@ -19,7 +20,15 @@ def load_model(path):
 def train(X_train, y_train):
     global model
     model.fit(X_train, y_train)
-    dump(model, 'logReg_model.joblib')
+
+    if not os.path.exists(config.MODELS_FOLDER):
+        os.makedirs(config.MODELS_FOLDER)
+        print(f"Created folder: {config.MODELS_FOLDER}")
+    model_path = os.path.join(config.MODELS_FOLDER, 'logreg_model.joblib')
+
+    dump(model, model_path)
+    print(f"Model saved in '{model_path}'")
+    
 
 def predict(X):
     return model.predict(X)
