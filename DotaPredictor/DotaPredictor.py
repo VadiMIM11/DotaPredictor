@@ -1,7 +1,4 @@
 import argparse
-from ast import parse
-import random
-import re
 from typing import Required
 from urllib import request
 import numpy as np
@@ -29,13 +26,13 @@ def generate_feature_vector(match_json):
     feture_vector = np.zeros(config.MAX_HERO_ID + 1, dtype=int)
     if match_json.get("pickBans") is None:
         print("No pickBans in match:", match_json["id"])
-        raise Exception("No pickBans in match")
+        raise ValueError("No pickBans in match")
     for pick in match_json["pickBans"]:
         if pick["isPick"] is True:
             hero_id = pick["heroId"]
             if hero_id < 1 or hero_id > config.MAX_HERO_ID:
                 print("Hero id out of range:", hero_id)
-                raise Exception("Hero id out of range")
+                raise ValueError("Hero id out of range")
             feture_vector[hero_id] = 1 if pick["isRadiant"] else -1
     return feture_vector
 
@@ -43,8 +40,7 @@ def generate_feature_vector(match_json):
 def get_label(match_json):
     if match_json.get("didRadiantWin") is None:
         print("No match result in match:", match_json["id"])
-        raise Exception("No match result")
-        exit(1)
+        raise ValueError("No match result")
     if match_json["didRadiantWin"]:
         return 1
     else:
@@ -77,7 +73,7 @@ def update_local_stats(api_token):
         print(f"Created folder: {FOLDER}")
 
     try:
-        with open(PATH, "w") as f:
+        with open(PATH, "w", endcoding=config.DEFAULT_ENCODING) as f:
             json.dump(stats, f, indent=4)
     except IOError as e:
         print(f"Error saving file: {e}")
@@ -92,7 +88,7 @@ def update_local_stats(api_token):
 
 def get_match_by_id(match_id):
     try:
-        with open(f"{config.DATA_FOLDER}/clean_train.json", "r") as f:
+        with open(f"{config.DATA_FOLDER}/clean_train.json", "r", endcoding=config.DEFAULT_ENCODING) as f:
             matches = json.load(f)
         matches = matches.get("data")
         if matches is None:
@@ -121,7 +117,7 @@ def save_raw_train(data):
         os.makedirs(FOLDER)
         print(f"Created folder: {FOLDER}")
     try:
-        with open(PATH, "w") as f:
+        with open(PATH, "w", endcoding=config.DEFAULT_ENCODING) as f:
             json.dump(data, f, indent=4)
     except IOError as e:
         print(f"Error saving file: {e}")
@@ -131,7 +127,7 @@ def save_raw_train(data):
 
 def clean_train():
     try:
-        with open(os.path.join(config.DATA_FOLDER, "raw_train.json")) as f:
+        with open(os.path.join(config.DATA_FOLDER, "raw_train.json", endcoding=config.DEFAULT_ENCODING)) as f:
             data = json.load(f)
     except IOError as e:
         print(f"Could not access raw training data file: {e}")
@@ -168,7 +164,7 @@ def clean_train():
     data["data"] = filtered_matches
 
     try:
-        with open(PATH, "w") as f:
+        with open(PATH, "w", endcoding=config.DEFAULT_ENCODING) as f:
             json.dump(data, f, indent=4)
     except IOError as e:
         print(f"Error saving file: {e}")
@@ -313,13 +309,6 @@ def main():
         help="Test calibration of models on test dataset",
     )
 
-    parser.add_argument(
-        "--generate_train",
-        action="store_true",
-        required=False,
-        help="Generate training and testing sets from clean_train.json",
-    )
-
     args = parser.parse_args()
 
     if args.load_all or args.load_logreg or args.load_rbf or args.load_mlp or args.load_tree:
@@ -328,7 +317,7 @@ def main():
                 path = os.path.join(config.MODELS_FOLDER, 'logreg_model.joblib')
                 logRegPredictor.load_model(path)
                 print("Loaded logistic regression model from disk")
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 print("Could not load logistic regression model from disk")
                 print(e)
 
@@ -337,7 +326,7 @@ def main():
                 path = os.path.join(config.MODELS_FOLDER, 'rbf_model.joblib')
                 rbfPredictor.load_model(path)
                 print("Loaded RBF SVM model from disk")
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 print("Could not load RBF SVM model from disk")
                 print(e)
 
@@ -346,7 +335,7 @@ def main():
                 path = os.path.join(config.MODELS_FOLDER, 'mlp_model.joblib')
                 mlpPredictor.load_model(path)
                 print("Loaded MLP model from disk")
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 print("Could not load MLP model from disk")
                 print(e)
 
@@ -355,7 +344,7 @@ def main():
                 path = os.path.join(config.MODELS_FOLDER, 'tree_model.joblib')
                 treePredictor.load_model(path)
                 print("Loaded Decision Tree model from disk")
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 print("Could not load Decision Tree model from disk")
                 print(e)
 
@@ -364,7 +353,7 @@ def main():
         print("Stratz API token file path:", args.stratz)
         token = ""
         try:
-            with open(args.stratz, "r") as f:
+            with open(args.stratz, "r", encoding=config.DEFAULT_ENCODING) as f:
                 token = f.read()
         except IOError as e:
             print(f"Error reading file: {e}")
@@ -394,10 +383,11 @@ def main():
         clean_train()
 
     global X_train, X_test, y_train, y_test
+    X_train = X_test = y_train = y_test = None
 
-    if args.train_all or args.train_rbf or args.train_logreg or args.train_mlp or args.generate_train:
+    if args.train_all or args.train_rbf or args.train_logreg or args.train_mlp or args.train_tree:
         try:
-            with open(os.path.join(config.DATA_FOLDER, "clean_train.json")) as f:
+            with open(os.path.join(config.DATA_FOLDER, "clean_train.json", endcoding=config.DEFAULT_ENCODING)) as f:
                 data = json.load(f)
         except:
             print(
@@ -525,13 +515,13 @@ def main():
         from algPredictor import predict
 
         try:
-            with open(os.path.join(config.DATA_FOLDER, "clean_train.json")) as f:
+            with open(os.path.join(config.DATA_FOLDER, "clean_train.json", endcoding=config.DEFAULT_ENCODING)) as f:
                 data = json.load(f)
         except IOError as e:
             print(f"Could not access clean training data file: {e}")
             exit(1)
         try:
-            with open(os.path.join("data", "all_hero_stats.json"), "r") as f:
+            with open(os.path.join("data", "all_hero_stats.json"), "r", endcoding=config.DEFAULT_ENCODING) as f:
                 all_stats = json.load(f)
         except IOError as e:
             print(f"Could not access hero stats file: {e}")
@@ -632,7 +622,7 @@ def main():
 
         print("Statistical Predictor:")
         try:
-            with open(os.path.join("data", "all_hero_stats.json"), "r") as f:
+            with open(os.path.join("data", "all_hero_stats.json"), "r", endcoding=config.DEFAULT_ENCODING) as f:
                 all_stats = json.load(f)
         except IOError as e:
             print(f"Could not access hero stats file: {e}")

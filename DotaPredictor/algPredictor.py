@@ -54,8 +54,8 @@ def predict(feature_vector, all_stats):
     
     if len(radiantHeroes) != 5 or len(direHeroes) != 5:
         print("Invalid feature vector: ", feature_vector)
-        raise Exception("Invalid feature vector")
-        exit(1)
+        raise ValueError("Invalid feature vector")
+        #exit(1)
 
     wr_with_sum = 0.0
     wr_against_sum = 0.0
@@ -69,7 +69,7 @@ def predict(feature_vector, all_stats):
             countWith += 1
 
     if countWith == 0:
-        raise Exception("No with data found")
+        raise ValueError("No 'with' data found")
 
     avg_wr_with = wr_with_sum / countWith
 
@@ -81,7 +81,7 @@ def predict(feature_vector, all_stats):
             countAgainst += 1
 
     if countAgainst == 0:
-        raise Exception("No against data found")
+        raise ValueError("No 'against' data found")
     avg_wr_against = wr_against_sum / countAgainst
 
     final_prediction = sigmoid((avg_wr_with + avg_wr_against) / 2.0)
@@ -89,7 +89,7 @@ def predict(feature_vector, all_stats):
 
 def predict_by_match_id(m_id):
     try:
-        with open(os.path.join("data", "all_hero_stats.json"), "r") as f:
+        with open(os.path.join("data", "all_hero_stats.json"), "r", encoding=config.DEFAULT_ENCODING) as f:
             all_stats = json.load(f)
     except IOError as e:
         print(f"Could not access hero stats file: {e}")
