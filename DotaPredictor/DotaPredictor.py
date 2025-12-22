@@ -10,10 +10,15 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 import config
-import logRegPredictor
-import rbfPredictor
-import mlpPredictor
-import treePredictor
+from logRegPredictor import LogRegPredictor
+from rbfPredictor import RbfPredictor
+from mlpPredictor import MlpPredictor
+from treePredictor import TreePredictor
+
+logRegPredictor = LogRegPredictor()
+rbfPredictor = RbfPredictor()
+mlpPredictor = MlpPredictor()
+treePredictor = TreePredictor()
 
 
 def extract_hero_ids(feature_vector):
@@ -73,7 +78,7 @@ def update_local_stats(api_token):
         print(f"Created folder: {FOLDER}")
 
     try:
-        with open(PATH, "w", endcoding=config.DEFAULT_ENCODING) as f:
+        with open(PATH, "w", encoding=config.DEFAULT_ENCODING) as f:
             json.dump(stats, f, indent=4)
     except IOError as e:
         print(f"Error saving file: {e}")
@@ -88,7 +93,7 @@ def update_local_stats(api_token):
 
 def get_match_by_id(match_id):
     try:
-        with open(f"{config.DATA_FOLDER}/clean_train.json", "r", endcoding=config.DEFAULT_ENCODING) as f:
+        with open(f"{config.DATA_FOLDER}/clean_train.json", "r", encoding=config.DEFAULT_ENCODING) as f:
             matches = json.load(f)
         matches = matches.get("data")
         if matches is None:
@@ -117,7 +122,7 @@ def save_raw_train(data):
         os.makedirs(FOLDER)
         print(f"Created folder: {FOLDER}")
     try:
-        with open(PATH, "w", endcoding=config.DEFAULT_ENCODING) as f:
+        with open(PATH, "w", encoding=config.DEFAULT_ENCODING) as f:
             json.dump(data, f, indent=4)
     except IOError as e:
         print(f"Error saving file: {e}")
@@ -127,7 +132,7 @@ def save_raw_train(data):
 
 def clean_train():
     try:
-        with open(os.path.join(config.DATA_FOLDER, "raw_train.json", endcoding=config.DEFAULT_ENCODING)) as f:
+        with open(os.path.join(config.DATA_FOLDER, "raw_train.json"), encoding=config.DEFAULT_ENCODING) as f:
             data = json.load(f)
     except IOError as e:
         print(f"Could not access raw training data file: {e}")
@@ -164,7 +169,7 @@ def clean_train():
     data["data"] = filtered_matches
 
     try:
-        with open(PATH, "w", endcoding=config.DEFAULT_ENCODING) as f:
+        with open(PATH, "w", encoding=config.DEFAULT_ENCODING) as f:
             json.dump(data, f, indent=4)
     except IOError as e:
         print(f"Error saving file: {e}")
@@ -313,41 +318,16 @@ def main():
 
     if args.load_all or args.load_logreg or args.load_rbf or args.load_mlp or args.load_tree:
         if args.load_all or args.load_logreg:
-            try:
-                path = os.path.join(config.MODELS_FOLDER, 'logreg_model.joblib')
-                logRegPredictor.load_model(path)
-                print("Loaded logistic regression model from disk")
-            except (OSError, ValueError) as e:
-                print("Could not load logistic regression model from disk")
-                print(e)
+            logRegPredictor.load_model()
 
         if args.load_all or args.load_rbf:
-            try:
-                path = os.path.join(config.MODELS_FOLDER, 'rbf_model.joblib')
-                rbfPredictor.load_model(path)
-                print("Loaded RBF SVM model from disk")
-            except (OSError, ValueError) as e:
-                print("Could not load RBF SVM model from disk")
-                print(e)
+            rbfPredictor.load_model()
 
         if args.load_all or args.load_mlp:
-            try:
-                path = os.path.join(config.MODELS_FOLDER, 'mlp_model.joblib')
-                mlpPredictor.load_model(path)
-                print("Loaded MLP model from disk")
-            except (OSError, ValueError) as e:
-                print("Could not load MLP model from disk")
-                print(e)
+            mlpPredictor.load_model()
 
         if args.load_all or args.load_tree:
-            try:
-                path = os.path.join(config.MODELS_FOLDER, 'tree_model.joblib')
-                treePredictor.load_model(path)
-                print("Loaded Decision Tree model from disk")
-            except (OSError, ValueError) as e:
-                print("Could not load Decision Tree model from disk")
-                print(e)
-
+            treePredictor.load_model()
 
     if args.stratz:
         print("Stratz API token file path:", args.stratz)
@@ -387,7 +367,7 @@ def main():
 
     if args.train_all or args.train_rbf or args.train_logreg or args.train_mlp or args.train_tree:
         try:
-            with open(os.path.join(config.DATA_FOLDER, "clean_train.json", endcoding=config.DEFAULT_ENCODING)) as f:
+            with open(os.path.join(config.DATA_FOLDER, "clean_train.json"), encoding=config.DEFAULT_ENCODING) as f:
                 data = json.load(f)
         except:
             print(
@@ -395,16 +375,13 @@ def main():
             )
             return
 
-        global X_train, X_test, y_train, y_test
         X, y = generate_treining_set(data)
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.25, random_state=config.RANDOM_STATE
         )
 
     if args.train_all or args.train_tree:
-        print("Training Decision Tree Predictor...")
         treePredictor.train(X_train, y_train)
-        print("Done training!")
         print()
         header = "=" * 5 + " Decision Tree Predictor " + "=" * 5
         print(header)
@@ -456,9 +433,7 @@ def main():
         print()
 
     if args.train_all or args.train_rbf:
-        print("Training RBF SVM Predictor...")
         rbfPredictor.train(X_train, y_train)
-        print("Done training!")
         print()
         header = "=" * 5 + " RBF SVM Predictor " + "=" * 5
         print(header)
@@ -484,9 +459,7 @@ def main():
         print()
 
     if args.train_all or args.train_mlp:
-        print("Training MLP Predictor...")
         mlpPredictor.train(X_train, y_train)
-        print("Done training!")
         print()
         header = "=" * 5 + " MLP Predictor " + "=" * 5
         print(header)
@@ -515,13 +488,13 @@ def main():
         from algPredictor import predict
 
         try:
-            with open(os.path.join(config.DATA_FOLDER, "clean_train.json", endcoding=config.DEFAULT_ENCODING)) as f:
+            with open(os.path.join(config.DATA_FOLDER, "clean_train.json"), encoding=config.DEFAULT_ENCODING) as f:
                 data = json.load(f)
         except IOError as e:
             print(f"Could not access clean training data file: {e}")
             exit(1)
         try:
-            with open(os.path.join("data", "all_hero_stats.json"), "r", endcoding=config.DEFAULT_ENCODING) as f:
+            with open(os.path.join("data", "all_hero_stats.json"), "r", encoding=config.DEFAULT_ENCODING) as f:
                 all_stats = json.load(f)
         except IOError as e:
             print(f"Could not access hero stats file: {e}")
@@ -622,7 +595,7 @@ def main():
 
         print("Statistical Predictor:")
         try:
-            with open(os.path.join("data", "all_hero_stats.json"), "r", endcoding=config.DEFAULT_ENCODING) as f:
+            with open(os.path.join("data", "all_hero_stats.json"), "r", encoding=config.DEFAULT_ENCODING) as f:
                 all_stats = json.load(f)
         except IOError as e:
             print(f"Could not access hero stats file: {e}")

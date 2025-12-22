@@ -49,7 +49,7 @@ def generate_hero_ids(api_token):
         os.makedirs(FOLDER)
         print(f"Created folder: {FOLDER}")
     try:
-        with open(PATH, "w", endcoding=config.DEFAULT_ENCODING) as f:
+        with open(PATH, "w", encoding=config.DEFAULT_ENCODING) as f:
             json.dump(all_ids, f)
     except IOError as e:
         print(f"Error saving file: {e}")
@@ -62,14 +62,14 @@ def generate_fetch_all_query(api_token):
     all_ids = []
     query = ""
     try:
-        with open(IDS_PATH, "r", endcoding=config.DEFAULT_ENCODING) as f:
+        with open(IDS_PATH, "r", encoding=config.DEFAULT_ENCODING) as f:
             all_ids = json.load(f)
         print("Success! Hero ids obtained from a local file!")
     except IOError as e1:
         print(f"Error reading file: {e1}")
         generate_hero_ids(api_token)
         try:
-            with open(IDS_PATH, "r", endcoding=config.DEFAULT_ENCODING) as f:
+            with open(IDS_PATH, "r", encoding=config.DEFAULT_ENCODING) as f:
                 all_ids = json.load(f)
         except IOError as e2:
             print(f"Error reading file: {e2}")

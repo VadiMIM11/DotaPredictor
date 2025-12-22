@@ -1,58 +1,14 @@
-import os
-from tabnanny import verbose
-import numpy as np
-import json
-from numpy.__config__ import CONFIG
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.calibration import CalibratedClassifierCV, calibration_curve
-from sklearn.metrics import accuracy_score, confusion_matrix
-
-from joblib import dump
-from joblib import load
-
-import DotaPredictor
+from sklearn.calibration import CalibratedClassifierCV
 import config
+from base_predictor import BasePredictor
 
-tree = DecisionTreeClassifier(max_depth=5, random_state=config.RANDOM_STATE)
-#adaboost = AdaBoostClassifier(estimator=tree, n_estimators=100, random_state=config.RANDOM_STATE)
-randomForest = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=config.RANDOM_STATE)
-model = CalibratedClassifierCV(randomForest, method='isotonic', cv=5)
-
-def load_model(path):
-    global model
-    model = load(path)
-
-def train(X_train, y_train):
-    global model
-    model.fit(X_train, y_train)
-
-    if not os.path.exists(config.MODELS_FOLDER):
-        os.makedirs(config.MODELS_FOLDER)
-        print(f"Created folder: {config.MODELS_FOLDER}")
-    model_path = os.path.join(config.MODELS_FOLDER, 'tree_model.joblib')
-
-    dump(model, model_path)
-    print(f"Model saved in '{model_path}'")
-
-def predict(X):
-    return model.predict(X)
-
-def predict_proba(X):
-    return model.predict_proba(X)
-
-def evaluate(X_test, y_test):
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    cm = confusion_matrix(y_test, y_pred)
-    return accuracy, cm
-
-def predict_by_match_id(match_id):
-    match = DotaPredictor.get_match_by_id(match_id)
-    X = DotaPredictor.generate_feature_vector(match)
-    return predict_proba([X])[0]
-    print(f"Match id {match_id} not found in data")
-    return None
-
+class TreePredictor(BasePredictor):
+    def __init__(self):
+        rf = RandomForestClassifier(
+            n_estimators=100, 
+            max_depth=10, 
+            random_state=config.RANDOM_STATE
+        )
+        model = CalibratedClassifierCV(rf, method='isotonic', cv=5)
+        super().__init__(model, 'tree_model.joblib')
