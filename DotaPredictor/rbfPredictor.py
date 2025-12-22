@@ -19,7 +19,8 @@ def load_model(path):
     global model
     model = load(path)
 
-def find_best_params():
+def find_best_params(X_train, y_train):
+    global model
     param_grid = {
         'C': [0.25, 0.5, 1, 2, 3],
         'gamma': [0.05, 0.1, 0.2, 0.3, 0.5]
@@ -27,7 +28,7 @@ def find_best_params():
     cv = StratifiedKFold(n_splits=4, shuffle=True, random_state=42)
 
     grid = GridSearchCV(
-        estimator=rbfModel,
+        estimator=model,
         param_grid=param_grid,
         cv=cv,
         scoring='f1',  
@@ -37,8 +38,16 @@ def find_best_params():
     grid.fit(X_train, y_train)
 
     params = grid.best_params_
-    rbfModel = grid.best_estimator_
+    model = grid.best_estimator_
     print("Best rbf parameters:", params)
+
+    model_path = os.path.join(config.MODELS_FOLDER, 'rbf_model.joblib')
+    if not os.path.exists(config.MODELS_FOLDER):
+        os.makedirs(config.MODELS_FOLDER)
+        print(f"Created folder: {config.MODELS_FOLDER}")
+    dump(model, model_path)
+    print(f"Model saved in '{model_path}'")
+
     return params
 
 def train(X_train, y_train, C=1, gamma=0.1):
