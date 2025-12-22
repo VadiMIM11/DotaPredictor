@@ -1,4 +1,5 @@
 import os
+import sys
 from joblib import dump, load
 from sklearn.metrics import accuracy_score, confusion_matrix
 import DotaPredictor
@@ -13,23 +14,23 @@ class BasePredictor:
         path = os.path.join(config.MODELS_FOLDER, self.filename)
         try:
             self.model = load(path)
-            print(f"Loaded {self.filename}")
+            print(f"Loaded {self.filename}", file=sys.stderr)
         except (OSError, ValueError) as e:
-            print(f"Could not load {self.filename}: {e}")
+            print(f"Could not load {self.filename}: {e}", file=sys.stderr)
 
     def train(self, X_train, y_train):
-        print(f"Training {self.filename}...")
+        print(f"Training {self.filename}...", file=sys.stderr)
         self.model.fit(X_train, y_train)
         self.save_model()
 
     def save_model(self):
         if not os.path.exists(config.MODELS_FOLDER):
             os.makedirs(config.MODELS_FOLDER)
-            print(f"Created folder: {config.MODELS_FOLDER}")
+            print(f"Created folder: {config.MODELS_FOLDER}", file=sys.stderr)
         
         path = os.path.join(config.MODELS_FOLDER, self.filename)
         dump(self.model, path)
-        print(f"Model saved in '{path}'")
+        print(f"Model saved in '{path}'", file=sys.stderr)
 
     def predict(self, X):
         return self.model.predict(X)
@@ -46,7 +47,7 @@ class BasePredictor:
     def predict_by_match_id(self, match_id):
         match = DotaPredictor.get_match_by_id(match_id)
         if match is None:
-             print(f"Match id {match_id} not found in data")
+             print(f"Match id {match_id} not found in data", file=sys.stderr)
              return None
         
         X = DotaPredictor.generate_feature_vector(match)

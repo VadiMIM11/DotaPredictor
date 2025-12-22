@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import os
 import json
@@ -16,7 +17,7 @@ def logit(p):
 def getWinrateWith(hero1, hero2, all_stats):
     hero1_matchups = all_stats["data"]["heroStats"].get(f"hero{hero1}MatchUp")
     if not hero1_matchups:
-        print(f"No data for hero {hero1}")
+        print(f"No data for hero {hero1}", file=sys.stderr)
         exit(1)
     if hero1 == hero2:
         return logit(hero1_matchups[0]["winRate"])
@@ -26,13 +27,13 @@ def getWinrateWith(hero1, hero2, all_stats):
                 if with_entry["heroId2"] == hero2:
                     return logit(with_entry["winsAverage"])
         else:
-            print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}")
+            print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}", file=sys.stderr)
             exit(1)
 
 def getWinrateAgainst(hero1, hero2, all_stats):
     hero1_matchups = all_stats["data"]["heroStats"].get(f"hero{hero1}MatchUp")
     if not hero1_matchups:
-        print(f"No data for hero {hero1}")
+        print(f"No data for hero {hero1}", file=sys.stderr)
         exit(1)
     for entry in hero1_matchups:
         if entry["heroId"] == hero1:
@@ -40,7 +41,7 @@ def getWinrateAgainst(hero1, hero2, all_stats):
                 if with_entry["heroId2"] == hero2:
                     return logit(with_entry["winsAverage"])
         else:
-            print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}")
+            print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}", file=sys.stderr)
             exit(1)
 
 def predict(feature_vector, all_stats):
@@ -53,7 +54,7 @@ def predict(feature_vector, all_stats):
             direHeroes.append(i)
     
     if len(radiantHeroes) != 5 or len(direHeroes) != 5:
-        print("Invalid feature vector: ", feature_vector)
+        print("Invalid feature vector: ", feature_vector, file=sys.stderr)
         raise ValueError("Invalid feature vector")
         #exit(1)
 
@@ -92,8 +93,8 @@ def predict_by_match_id(m_id):
         with open(os.path.join("data", "all_hero_stats.json"), "r", encoding=config.DEFAULT_ENCODING) as f:
             all_stats = json.load(f)
     except IOError as e:
-        print(f"Could not access hero stats file: {e}")
-        print("Try fetching hero stats from stratz using --update")
+        print(f"Could not access hero stats file: {e}", file=sys.stderr)
+        print("Try fetching hero stats from stratz using --update", file=sys.stderr)
         exit(1)
     match = DotaPredictor.get_match_by_id(m_id)
     feature_vector = DotaPredictor.generate_feature_vector(match)
