@@ -68,7 +68,10 @@ def generate_treining_set(matches_json):
 
 
 def update_local_stats(api_token):
-    print("Updating local hero statistics dataset via stratz.com requests...", file=sys.stderr)
+    print(
+        "Updating local hero statistics dataset via stratz.com requests...",
+        file=sys.stderr,
+    )
     stats = sq.fetch_all_stats(api_token)
 
     FOLDER = config.DATA_FOLDER
@@ -87,14 +90,21 @@ def update_local_stats(api_token):
     num_fetched = len(stats.get("data", {}).get("heroStats", {}))
     print(f"Fetched stats for {num_fetched} heroes", file=sys.stderr)
     if num_fetched != config.NUM_HEROES:
-        print(f"Warning: Expected {config.NUM_HEROES} heroes, but got {num_fetched}.", file=sys.stderr)
+        print(
+            f"Warning: Expected {config.NUM_HEROES} heroes, but got {num_fetched}.",
+            file=sys.stderr,
+        )
 
     print(f"Local hero stats dataset updated and saved to {PATH}", file=sys.stderr)
 
 
 def get_match_by_id(match_id):
     try:
-        with open(f"{config.DATA_FOLDER}/clean_train.json", "r", encoding=config.DEFAULT_ENCODING) as f:
+        with open(
+            f"{config.DATA_FOLDER}/clean_train.json",
+            "r",
+            encoding=config.DEFAULT_ENCODING,
+        ) as f:
             matches = json.load(f)
         matches = matches.get("data")
         if matches is None:
@@ -105,7 +115,9 @@ def get_match_by_id(match_id):
             if not current_id is None and current_id == match_id:
                 return match
     except IOError:
-        print("Data file not found. Please run the data fetching first.", file=sys.stderr)
+        print(
+            "Data file not found. Please run the data fetching first.", file=sys.stderr
+        )
         exit(1)
 
     match = sq.fetch_match_by_id(config.API_TOKEN, match_id)
@@ -133,7 +145,10 @@ def save_raw_train(data):
 
 def clean_train():
     try:
-        with open(os.path.join(config.DATA_FOLDER, "raw_train.json"), encoding=config.DEFAULT_ENCODING) as f:
+        with open(
+            os.path.join(config.DATA_FOLDER, "raw_train.json"),
+            encoding=config.DEFAULT_ENCODING,
+        ) as f:
             data = json.load(f)
     except IOError as e:
         print(f"Could not access raw training data file: {e}", file=sys.stderr)
@@ -176,6 +191,7 @@ def clean_train():
         print(f"Error saving file: {e}", file=sys.stderr)
 
     print(f"Clean training dataset saved to {PATH}", file=sys.stderr)
+
 
 def get_confidence_accuracy(probas, y_test, confidence_threshold):
     hit = 0
@@ -317,7 +333,13 @@ def main():
 
     args = parser.parse_args()
 
-    if args.load_all or args.load_logreg or args.load_rbf or args.load_mlp or args.load_tree:
+    if (
+        args.load_all
+        or args.load_logreg
+        or args.load_rbf
+        or args.load_mlp
+        or args.load_tree
+    ):
         if args.load_all or args.load_logreg:
             logRegPredictor.load_model()
 
@@ -345,7 +367,8 @@ def main():
     if args.update_stats:
         if not args.stratz:
             print(
-                "Please provide stratz.com API token to update local hero stats dataset using:\n --stratz <PATH>", file=sys.stderr
+                "Please provide stratz.com API token to update local hero stats dataset using:\n --stratz <PATH>",
+                file=sys.stderr,
             )
             return
 
@@ -354,7 +377,8 @@ def main():
     if args.fetch_train:
         if not args.stratz:
             print(
-                "Please provide stratz.com API token to fetch latest matches for training dataset using:\n --stratz <PATH>", file=sys.stderr
+                "Please provide stratz.com API token to fetch latest matches for training dataset using:\n --stratz <PATH>",
+                file=sys.stderr,
             )
             return
         json_data = sq.fetch_train(config.API_TOKEN)
@@ -366,13 +390,29 @@ def main():
     global X_train, X_test, y_train, y_test
     X_train = X_test = y_train = y_test = None
 
-    if args.train_all or args.train_rbf or args.train_logreg or args.train_mlp or args.train_tree:
+    if (
+        args.load_all
+        or args.load_rbf
+        or args.load_logreg
+        or args.load_mlp
+        or args.load_tree
+    ) or (
+        args.train_all
+        or args.train_rbf
+        or args.train_logreg
+        or args.train_mlp
+        or args.train_tree
+    ):
         try:
-            with open(os.path.join(config.DATA_FOLDER, "clean_train.json"), encoding=config.DEFAULT_ENCODING) as f:
+            with open(
+                os.path.join(config.DATA_FOLDER, "clean_train.json"),
+                encoding=config.DEFAULT_ENCODING,
+            ) as f:
                 data = json.load(f)
         except:
             print(
-                "Could not access clean training data file. Please run with --filter", file=sys.stderr
+                "Could not access clean training data file. Please run with --filter",
+                file=sys.stderr,
             )
             return
 
@@ -489,13 +529,20 @@ def main():
         from algPredictor import predict
 
         try:
-            with open(os.path.join(config.DATA_FOLDER, "clean_train.json"), encoding=config.DEFAULT_ENCODING) as f:
+            with open(
+                os.path.join(config.DATA_FOLDER, "clean_train.json"),
+                encoding=config.DEFAULT_ENCODING,
+            ) as f:
                 data = json.load(f)
         except IOError as e:
             print(f"Could not access clean training data file: {e}", file=sys.stderr)
             exit(1)
         try:
-            with open(os.path.join("data", "all_hero_stats.json"), "r", encoding=config.DEFAULT_ENCODING) as f:
+            with open(
+                os.path.join("data", "all_hero_stats.json"),
+                "r",
+                encoding=config.DEFAULT_ENCODING,
+            ) as f:
                 all_stats = json.load(f)
         except IOError as e:
             print(f"Could not access hero stats file: {e}", file=sys.stderr)
@@ -515,13 +562,16 @@ def main():
         true_negative_count = 0
         false_negative_count = 0
         outdrafted = []
-        for match_key, match_value in matches.items():
+        for match_key, match_value in tqdm(matches.items()):
             try:
                 feature_vector = generate_feature_vector(match_value)
                 predicted_prob = predict(feature_vector, all_stats)
                 didRadiantWin = match_value.get("didRadiantWin")
                 if didRadiantWin is None:
-                    print(f"Match {match_key} has no radiantWin field, skipping...", file=sys.stderr)
+                    print(
+                        f"Match {match_key} has no radiantWin field, skipping...",
+                        file=sys.stderr,
+                    )
                     continue
                 if abs(0.5 - predicted_prob) > 0.04:
                     # print()
@@ -586,7 +636,8 @@ def main():
 
     def print_confidence_accuracy(confidence, accuracy, count):
         print(
-            f"Confidence >={confidence*100:.1f}%: Accuracy: {accuracy*100:.4f}% count: {count}", file=sys.stderr
+            f"Confidence >={confidence*100:.1f}%: Accuracy: {accuracy*100:.4f}% count: {count}",
+            file=sys.stderr,
         )
 
     if args.test_calibration:
@@ -594,26 +645,31 @@ def main():
         print(header, file=sys.stderr)
         print(file=sys.stderr)
 
-        print("Statistical Predictor:", file=sys.stderr)
-        try:
-            with open(os.path.join("data", "all_hero_stats.json"), "r", encoding=config.DEFAULT_ENCODING) as f:
-                all_stats = json.load(f)
-        except IOError as e:
-            print(f"Could not access hero stats file: {e}", file=sys.stderr)
-            print("Try fetching hero stats from stratz using --update", file=sys.stderr)
-            exit(1)
-
         thresholds = [0.00, 0.05, 0.10, 0.15]
-
         probas = []
-        for i in range(len(X_test)):
-            prob = algPredictor.predict(X_test[i], all_stats)
-            probas.append([1 - prob, prob])
 
-        for threshold in thresholds:
-            count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
-            print_confidence_accuracy(0.5 + threshold, accuracy, count)
-        print(file=sys.stderr)
+        if args.test_alg_predict:
+            print("Statistical Predictor:", file=sys.stderr)
+            try:
+                with open(
+                    os.path.join("data", "all_hero_stats.json"),
+                    "r",
+                    encoding=config.DEFAULT_ENCODING,
+                ) as f:
+                    all_stats = json.load(f)
+            except IOError as e:
+                print(f"Could not access hero stats file: {e}", file=sys.stderr)
+                print("Try fetching hero stats from stratz using --update", file=sys.stderr)
+                exit(1)
+
+            for i in range(len(X_test)):
+                prob = algPredictor.predict(X_test[i], all_stats)
+                probas.append([1 - prob, prob])
+
+            for threshold in thresholds:
+                count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
+                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+            print(file=sys.stderr)
 
         if (args.load_all or args.load_logreg) or (args.train_all or args.train_logreg):
             print("Logistic Regression Predictor:", file=sys.stderr)
@@ -652,23 +708,38 @@ def main():
         print(f"Precict match {m_id}", file=sys.stderr)
         if (args.load_all or args.load_rbf) or (args.train_all or args.train_rbf):
             prob = rbfPredictor.predict_by_match_id(m_id)
-            print(f"RBF: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%", file=sys.stderr)
+            print(
+                f"RBF: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%",
+                file=sys.stderr,
+            )
             print(f"{rbfPredictor.filename}: {prob[1]}", file=sys.stdout)
         if (args.load_all or args.load_mlp) or (args.train_all or args.train_mlp):
             prob = mlpPredictor.predict_by_match_id(m_id)
-            print(f"MLP: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%", file=sys.stderr)
+            print(
+                f"MLP: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%",
+                file=sys.stderr,
+            )
             print(f"{mlpPredictor.filename}: {prob[1]}", file=sys.stdout)
         if (args.load_all or args.load_tree) or (args.train_all or args.train_tree):
             prob = treePredictor.predict_by_match_id(m_id)
-            print(f"Tree: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%", file=sys.stderr)
+            print(
+                f"Tree: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%",
+                file=sys.stderr,
+            )
             print(f"{treePredictor.filename}: {prob[1]}", file=sys.stdout)
         if (args.load_all or args.load_logreg) or (args.train_all or args.train_logreg):
             prob = logRegPredictor.predict_by_match_id(m_id)
-            print(f"LogReg: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%", file=sys.stderr)
+            print(
+                f"LogReg: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%",
+                file=sys.stderr,
+            )
             print(f"{logRegPredictor.filename}: {prob[1]}", file=sys.stdout)
         prob = algPredictor.predict_by_match_id(m_id)
-        print(f"Statistical: {m_id} -> Radiant Win with {(prob * 100):.4f}%", file=sys.stderr)
-        #print(f"Statistical: {prob}", file=sys.stdout)
+        print(
+            f"Statistical: {m_id} -> Radiant Win with {(prob * 100):.4f}%",
+            file=sys.stderr,
+        )
+        # print(f"Statistical: {prob}", file=sys.stdout)
         print(file=sys.stderr)
 
     if args.predict_by_id:

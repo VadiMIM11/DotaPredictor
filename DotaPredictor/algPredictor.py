@@ -56,7 +56,6 @@ def predict(feature_vector, all_stats):
     if len(radiantHeroes) != 5 or len(direHeroes) != 5:
         print("Invalid feature vector: ", feature_vector, file=sys.stderr)
         raise ValueError("Invalid feature vector")
-        #exit(1)
 
     wr_with_sum = 0.0
     wr_against_sum = 0.0

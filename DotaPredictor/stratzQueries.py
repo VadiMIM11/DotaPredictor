@@ -1,4 +1,5 @@
 from ast import Raise
+import sys
 import requests
 import json
 import os
@@ -33,7 +34,7 @@ URL = "https://api.stratz.com/graphql"
 
 
 def generate_hero_ids(api_token):
-    print("Obtaining ids of all existing heroes from single stratz query...")
+    print("Obtaining ids of all existing heroes from single stratz query...", file=sys.stderr)
     hero_stats = fetch_hero_stats(1, api_token)
     arr = hero_stats["data"]["heroStats"]["matchUp"][0]["with"]
     all_ids = [1]
@@ -47,14 +48,14 @@ def generate_hero_ids(api_token):
     PATH = os.path.join(FOLDER, FILE_NAME)
     if not os.path.exists(FOLDER):
         os.makedirs(FOLDER)
-        print(f"Created folder: {FOLDER}")
+        print(f"Created folder: {FOLDER}", file=sys.stderr)
     try:
         with open(PATH, "w", encoding=config.DEFAULT_ENCODING) as f:
             json.dump(all_ids, f)
     except IOError as e:
-        print(f"Error saving file: {e}")
+        print(f"Error saving file: {e}", file=sys.stderr)
 
-    print(f"Success! Ids saved to {PATH}")
+    print(f"Success! Ids saved to {PATH}", file=sys.stderr)
 
 
 def generate_fetch_all_query(api_token):
@@ -64,15 +65,15 @@ def generate_fetch_all_query(api_token):
     try:
         with open(IDS_PATH, "r", encoding=config.DEFAULT_ENCODING) as f:
             all_ids = json.load(f)
-        print("Success! Hero ids obtained from a local file!")
+        print("Success! Hero ids obtained from a local file!", file=sys.stderr)
     except IOError as e1:
-        print(f"Error reading file: {e1}")
+        print(f"Error reading file: {e1}", file=sys.stderr)
         generate_hero_ids(api_token)
         try:
             with open(IDS_PATH, "r", encoding=config.DEFAULT_ENCODING) as f:
                 all_ids = json.load(f)
         except IOError as e2:
-            print(f"Error reading file: {e2}")
+            print(f"Error reading file: {e2}", file=sys.stderr)
             exit(1)
 
     # print("Length of all ids: ", len(all_ids))
@@ -157,14 +158,14 @@ def fetch_all_winrates(api_token):
           }
         }
         """
-    print("Fetching all hero winrates from stratz...")
+    print("Fetching all hero winrates from stratz...", file=sys.stderr)
     response = requests.post(URL, json={"query": query}, headers=headers)
     if response.status_code == 200:
-        print("Success! Fetched winrates for all heroes!")
+        print("Success! Fetched winrates for all heroes!", file=sys.stderr)
 
         return response.json()
     else:
-        print("Query failed with code:", response.status_code)
+        print("Query failed with code:", response.status_code, file=sys.stderr)
         raise Exception(
             f"Query failed with status code {response.status_code}: {response.text}"
         )
@@ -318,8 +319,6 @@ def fetch_all_stats(api_token):
         "User-Agent": "STRATZ_API",
     }
     FETCH_ALL_STATS_EQURY = generate_fetch_all_query(api_token)
-    # print(FETCH_ALL_STATS_EQURY)
-    # exit(1)
     print("Fetching all hero stats from stratz...")
     response = requests.post(
         URL, json={"query": FETCH_ALL_STATS_EQURY}, headers=headers
