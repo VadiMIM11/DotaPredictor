@@ -7,7 +7,7 @@ LATEST_MATCH_ID = 8525473049
 MIN_RANK = 4 # [0..8] 0 = Uncalibrated, 1 = Herald, 8 = Immortal
 RANKED_ONLY = False
 GAMEMODES = ["ALL_PICK", "ALL_PICK_RANKED", "RANDOM_DRAFT", "SINGLE_DRAFT", "CAPTAINS_MODE"]
-NUM_HEROES = 126
-MAX_HERO_ID = 145
-API_TOKEN = "" # do not set your token here use CLI arguments instead
+NUM_HEROES = 127
+MAX_HERO_ID = 155
+API_TOKEN = "" # do not set token here use CLI arguments instead
 RANDOM_STATE = 42
