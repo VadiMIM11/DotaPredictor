@@ -49,7 +49,7 @@ def generate_hero_ids(api_token):
         os.makedirs(FOLDER)
         print(f"Created folder: {FOLDER}")
     try:
-        with open(PATH, "w") as f:
+        with open(PATH, "w", endcoding=config.DEFAULT_ENCODING) as f:
             json.dump(all_ids, f)
     except IOError as e:
         print(f"Error saving file: {e}")
@@ -62,17 +62,17 @@ def generate_fetch_all_query(api_token):
     all_ids = []
     query = ""
     try:
-        with open(IDS_PATH, "r") as f:
+        with open(IDS_PATH, "r", endcoding=config.DEFAULT_ENCODING) as f:
             all_ids = json.load(f)
         print("Success! Hero ids obtained from a local file!")
-    except IOError as e:
-        print(f"Error reading file: {e}")
+    except IOError as e1:
+        print(f"Error reading file: {e1}")
         generate_hero_ids(api_token)
         try:
-            with open(IDS_PATH, "r") as f:
+            with open(IDS_PATH, "r", endcoding=config.DEFAULT_ENCODING) as f:
                 all_ids = json.load(f)
-        except IOError as e:
-            print(f"Error reading file: {e}")
+        except IOError as e2:
+            print(f"Error reading file: {e2}")
             exit(1)
 
     # print("Length of all ids: ", len(all_ids))
@@ -99,7 +99,7 @@ def generate_fetch_all_query(api_token):
     return query
 
 
-def generate_fetch_train_query(api_token, latest_match_id, fetch_size):
+def generate_fetch_train_query(latest_match_id, fetch_size):
     if fetch_size < 1:
         Raise("fetch_size must be at least 1")
 
@@ -181,7 +181,7 @@ def fetch_train(api_token):
     print("Fetching matches from stratz ...")
     for i in tqdm(range(config.FETCH_TRAIN_SIZE // config.MAX_MATCHES_IN_QUERY)):
         FETCH_TRAIN_QUERY = generate_fetch_train_query(
-            api_token, current_latest_id, config.MAX_MATCHES_IN_QUERY
+            current_latest_id, config.MAX_MATCHES_IN_QUERY
         )
         # print(
         #     f"Matches [{current_latest_id} .. {current_latest_id - config.MAX_MATCHES_IN_QUERY + 1}]"
@@ -209,7 +209,7 @@ def fetch_train(api_token):
     batch_size = config.FETCH_TRAIN_SIZE % config.MAX_MATCHES_IN_QUERY
     if batch_size > 0:
         FETCH_TRAIN_QUERY = generate_fetch_train_query(
-            api_token, current_latest_id, batch_size
+            current_latest_id, batch_size
         )
         print(f"Matches [{current_latest_id} .. {current_latest_id - batch_size + 1}]")
         print(f"Fetching a batch of {batch_size} matches from stratz...")
