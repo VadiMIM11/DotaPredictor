@@ -507,6 +507,7 @@ def main():
         print("Total matches to test:", y_test.size, file=sys.stderr)
         print(file=sys.stderr)
         accuracy, cm = mlpPredictor.evaluate(X_test, y_test, file=sys.stderr)
+        accuracy, cm = mlpPredictor.evaluate(X_test, y_test)
         print(f"Accuracy: {accuracy:.4f}", file=sys.stderr)
         # print("True Negatives:", cm[0][0])
         # print("False Positives:", cm[0][1])
@@ -566,6 +567,9 @@ def main():
             try:
                 feature_vector = generate_feature_vector(match_value)
                 predicted_prob = predict(feature_vector, all_stats)
+                #feature_vector = generate_feature_vector(match_value)
+                r_ids, d_ids = preprocessing.extract_radiant_hero_ids_from_json(match_value)
+                predicted_prob = algPredictor.predict(r_ids, d_ids, all_stats)
                 didRadiantWin = match_value.get("didRadiantWin")
                 if didRadiantWin is None:
                     print(

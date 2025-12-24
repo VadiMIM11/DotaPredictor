@@ -1,4 +1,5 @@
 import sys
+import joblib
 import numpy as np
 import os
 import json
@@ -15,22 +16,30 @@ def logit(p):
     return np.log(p / (1 - p))
 
 def getWinrateWith(hero1, hero2, all_stats):
+    hero1 = int(hero1)
+    hero2 = int(hero2)
     hero1_matchups = all_stats["data"]["heroStats"].get(f"hero{hero1}MatchUp")
     if not hero1_matchups:
         print(f"No data for hero {hero1}", file=sys.stderr)
         exit(1)
     if hero1 == hero2:
-        return logit(hero1_matchups[0]["winRate"])
+        float_wr = float(hero1_matchups[0]["winRate"])
+        return logit(float_wr)
     for entry in hero1_matchups:
         if entry["heroId"] == hero1:
             for with_entry in entry["with"]:
                 if with_entry["heroId2"] == hero2:
-                    return logit(with_entry["winsAverage"])
+                    float_wr = float(with_entry["winsAverage"])
+                    return logit(float_wr)
+            print(f"No 'with' data for hero {hero1} with hero {hero2}", file=sys.stderr)
+            return logit(0.5)  # Neutral if no data
         else:
-            print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}", file=sys.stderr)
+            print(f"Hero id mismatch: hero{entry["heroId"]}MatchUp entry has heroId: {hero1}", file=sys.stderr)
             exit(1)
 
 def getWinrateAgainst(hero1, hero2, all_stats):
+    hero1 = int(hero1)
+    hero2 = int(hero2)
     hero1_matchups = all_stats["data"]["heroStats"].get(f"hero{hero1}MatchUp")
     if not hero1_matchups:
         print(f"No data for hero {hero1}", file=sys.stderr)
@@ -43,19 +52,15 @@ def getWinrateAgainst(hero1, hero2, all_stats):
         else:
             print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}", file=sys.stderr)
             exit(1)
+    
 
-def predict(feature_vector, all_stats):
-    radiantHeroes = []
-    direHeroes = []
-    for i in range(1, config.MAX_HERO_ID+1):
-        if feature_vector[i] == 1:
-            radiantHeroes.append(i)
-        elif feature_vector[i] == -1:
-            direHeroes.append(i)
+def predict(radiant_ids, dire_ids, all_stats):
+    radiantHeroes = radiant_ids
+    direHeroes = dire_ids
     
     if len(radiantHeroes) != 5 or len(direHeroes) != 5:
-        print("Invalid feature vector: ", feature_vector, file=sys.stderr)
-        raise ValueError("Invalid feature vector")
+        print("Invalid team format: ", radiantHeroes, direHeroes, file=sys.stderr)
+        raise ValueError("Invalid team format")
 
     wr_with_sum = 0.0
     wr_against_sum = 0.0
@@ -97,5 +102,8 @@ def predict_by_match_id(m_id):
         exit(1)
     match = DotaPredictor.get_match_by_id(m_id)
     feature_vector = DotaPredictor.generate_feature_vector(match)
+    feature_vector_2d = [feature_vector]
+    scaler = joblib.load(os.path.join(config.MODELS_FOLDER, "scaler.joblib"))
+    feature_vector = scaler.transform(feature_vector_2d)
     return predict(feature_vector, all_stats)
 
