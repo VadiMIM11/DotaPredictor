@@ -389,9 +389,11 @@ def main():
             )
             return
 
-
         preprocessing.train_and_save_embeddings()
+
         X, y = preprocessing.generate_treining_set(data)
+
+
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.25, random_state=config.RANDOM_STATE
         )
