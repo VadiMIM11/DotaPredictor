@@ -34,7 +34,10 @@ URL = "https://api.stratz.com/graphql"
 
 
 def generate_hero_ids(api_token):
-    print("Obtaining ids of all existing heroes from single stratz query...", file=sys.stderr)
+    print(
+        "Obtaining ids of all existing heroes from single stratz query...",
+        file=sys.stderr,
+    )
     hero_stats = fetch_hero_stats(1, api_token)
     arr = hero_stats["data"]["heroStats"]["matchUp"][0]["with"]
     all_ids = [1]
@@ -209,9 +212,7 @@ def fetch_train(api_token):
 
     batch_size = config.FETCH_TRAIN_SIZE % config.MAX_MATCHES_IN_QUERY
     if batch_size > 0:
-        FETCH_TRAIN_QUERY = generate_fetch_train_query(
-            current_latest_id, batch_size
-        )
+        FETCH_TRAIN_QUERY = generate_fetch_train_query(current_latest_id, batch_size)
         print(f"Matches [{current_latest_id} .. {current_latest_id - batch_size + 1}]")
         print(f"Fetching a batch of {batch_size} matches from stratz...")
         response = requests.post(
@@ -344,3 +345,57 @@ def fetch_all_stats(api_token):
         raise Exception(
             f"Query failed with status code {response.status_code}: {response.text}"
         )
+
+    # heroDetailsQuery = """
+    # {
+    # heroStats{
+    #     stats(heroIds: [1, 111, 22]){
+    #       heroId
+    #       time
+    #       week
+    #       matchCount
+    #       kills
+    #       deaths
+    #       assists
+    #       networth
+    #       kDAAverage
+    #       xpFed
+    #       goldLost
+    #       goldFed
+    #       xp
+    #       cs
+    #       dn
+    #       neutrals
+    #       ancients
+    #       heroDamage
+    #       damage
+    #       towerDamage
+    #       pureDamage
+    #       physicalDamage
+    #       magicalDamage
+    #       physicalItemDamage
+    #       magicalItemDamage
+    #       courierKills
+    #       damageReceived
+    #       physicalDamageReceived
+    #       magicalDamageReceived
+    #       pureDamageReceived
+    #       disableDuration
+    #       slowDuration
+    #       stunDuration
+    #       healingSelf
+    #       healingAllies
+    #       healingItemSelf
+    #       healingItemAllies
+    #       campsStacked
+    #       runePower
+    #       runeBounty
+    #       killContributionAverage
+    #       level
+    #       supportGold
+    #       purgeModifiers
+    #       invisibleCount
+    #     }
+    #   }
+    # }
+    # """
