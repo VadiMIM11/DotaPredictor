@@ -67,6 +67,7 @@ def load_data_from_file():
         with open(path, encoding=config.DEFAULT_ENCODING) as f:
             data = json.load(f)
         return generate_treining_set(data)  # Returns X, y
+        return generate_embedded_training_set(data)  # Returns X, y
     except Exception as e:
         print(f"Error loading data: {e}", file=sys.stderr)
         return None, None
@@ -79,6 +80,7 @@ def load_data_from_file():
 
 
 def generate_feature_vector(match_json):
+def generate_embedding(match_json):
     model = DotaPredictor.load_embedding_model()
     r_ids, d_ids = extract_hero_ids_from_json(match_json)
     stats = load_stats()
@@ -103,6 +105,38 @@ def generate_feature_vector(match_json):
         [rad_vec, dire_vec, [stat_prob], [avg_wr_with], [avg_wr_against]]
     )
 
+def generate_multihot_fv(match_json):
+    feture_vector = np.zeros(config.MAX_HERO_ID + 1, dtype=int)
+    if match_json.get("pickBans") is None:
+        print("No pickBans in match:", match_json["id"], file=sys.stderr)
+        raise ValueError("No pickBans in match")
+    for pick in match_json["pickBans"]:
+        if pick["isPick"] is True:
+            hero_id = pick["heroId"]
+            if hero_id < 1 or hero_id > config.MAX_HERO_ID:
+                print("Hero id out of range:", hero_id, file=sys.stderr)
+                raise ValueError("Hero id out of range")
+            feture_vector[hero_id] = 1 if pick["isRadiant"] else -1
+    return feture_vector
+
+def generate_multihot_training_set(matches_json):
+    matches = matches_json.get("data")
+    X_list = []
+    y_list = []
+    for key, match in tqdm.tqdm(matches.items()):
+        feature_vector = generate_multihot_fv(match)
+        label = get_label(match)
+        X_list.append(feature_vector)
+        y_list.append(label)
+    X = np.array(X_list)
+    y = np.array(y_list)
+    if not os.path.exists(config.MODELS_FOLDER):
+        os.makedirs(config.MODELS_FOLDER)
+        print(f"Created folder: {config.MODELS_FOLDER}", file=sys.stderr)
+    path = os.path.join(config.MODELS_FOLDER, "scaler.joblib")
+    dump(scaler, path)
+    print(f"Model saved in '{path}'", file=sys.stderr)
+    return X, y
 
 def get_label(match_json):
     if match_json.get("didRadiantWin") is None:
@@ -115,11 +149,13 @@ def get_label(match_json):
 
 
 def generate_treining_set(matches_json):
+def generate_embedded_training_set(matches_json):
     matches = matches_json.get("data")
     X_list = []
     y_list = []
     for key, match in tqdm.tqdm(matches.items()):
         feature_vector = generate_feature_vector(match)
+        feature_vector = generate_embedding(match)
         label = get_label(match)
         X_list.append(feature_vector)
         y_list.append(label)
