@@ -6,7 +6,7 @@ from base_predictor import BasePredictor
 class RbfPredictor(BasePredictor):
     def __init__(self):
         # Default initialization
-        model = svm.SVC(kernel='rbf', probability=True, C=1, gamma=0.1, random_state=config.RANDOM_STATE)
+        model = svm.SVC(kernel='rbf', probability=True, C=1, gamma=0.1, random_state=config.RANDOM_STATE, class_weight='balanced')
         super().__init__(model, 'rbf_model.joblib')
 
     # OVERRIDE the train method to accept C and gamma arguments

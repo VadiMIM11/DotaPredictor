@@ -6,8 +6,10 @@ from base_predictor import BasePredictor
 class MlpPredictor(BasePredictor):
     def __init__(self):
         mlp = MLPClassifier(
-            hidden_layer_sizes=(1024, 512, 256, 128), 
+            hidden_layer_sizes=(128, 64, 32), 
             activation='relu', 
+            solver='adam',
+            early_stopping=True,
             max_iter=500, 
             random_state=config.RANDOM_STATE
         )

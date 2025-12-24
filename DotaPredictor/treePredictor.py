@@ -8,7 +8,8 @@ class TreePredictor(BasePredictor):
         rf = RandomForestClassifier(
             n_estimators=100, 
             max_depth=10, 
-            random_state=config.RANDOM_STATE
+            random_state=config.RANDOM_STATE,
+            class_weight='balanced'
         )
         model = CalibratedClassifierCV(rf, method='isotonic', cv=5)
         super().__init__(model, 'tree_model.joblib')
