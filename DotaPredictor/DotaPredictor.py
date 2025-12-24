@@ -766,7 +766,7 @@ def main():
         print(header, file=sys.stderr)
         print(file=sys.stderr)
 
-        thresholds = [0.00, 0.05, 0.10, 0.15]
+        thresholds = [0.00, 0.05, 0.10, 0.15, 0.2]
         probas = []
 
         if args.test_alg_predict:
