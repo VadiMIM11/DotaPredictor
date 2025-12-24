@@ -16,8 +16,10 @@ import config
 from logRegPredictor import LogRegPredictor
 from rbfPredictor import RbfPredictor
 from mlpPredictor import MlpPredictor
+import torchPredictor
 from treePredictor import TreePredictor
 from catPredictor import CatPredictor
+from torchPredictor import TorchPredictor
 
 
 logRegPredictor = LogRegPredictor()
@@ -25,6 +27,7 @@ rbfPredictor = RbfPredictor()
 mlpPredictor = MlpPredictor()
 treePredictor = TreePredictor()
 catPredictor = CatPredictor()
+torchPredictor = TorchPredictor()
 
 
 def update_local_stats(api_token):
@@ -245,6 +248,13 @@ def main():
     )
 
     parser.add_argument(
+        "--load_nn",
+        action="store_true",
+        required=False,
+        help="Load PyTorch Siamese Deep Sets Network model from disk",
+        )
+
+    parser.add_argument(
         "--load_logreg",
         action="store_true",
         required=False,
@@ -280,6 +290,13 @@ def main():
     )
 
     parser.add_argument("--train_cat", action="store_true", help="Train CatBoost model")
+
+    parser.add_argument(
+        "--train_nn",
+        action="store_true",
+        required=False,
+        help="Train PyTorch Siamese Deep Sets Network model",
+        )
 
     parser.add_argument(
         "--train_logreg",
@@ -332,6 +349,7 @@ def main():
         or args.load_mlp
         or args.load_tree
         or args.load_cat
+        or args.load_nn
     ):
         if args.load_all or args.load_logreg:
             logRegPredictor.load_model()
@@ -347,6 +365,9 @@ def main():
 
         if args.load_all or args.load_cat:
             catPredictor.load_model()
+
+        if args.load_all or args.load_nn:
+            torchPredictor.load_model()
 
     if args.stratz:
         print("Stratz API token file path:", args.stratz, file=sys.stderr)
@@ -389,6 +410,8 @@ def main():
         or args.load_logreg
         or args.load_mlp
         or args.load_tree
+        or args.load_cat
+        or args.load_nn
     ) or (
         args.train_all
         or args.train_rbf
@@ -396,36 +419,86 @@ def main():
         or args.train_mlp
         or args.train_tree
         or args.train_cat
+        or args.train_nn
     ):
-        try:
-            with open(
-                os.path.join(config.DATA_FOLDER, "clean_train.json"),
-                encoding=config.DEFAULT_ENCODING,
-            ) as f:
-                data = json.load(f)
-        except:
-            print(
-                "Could not access clean training data file. Please run with --filter",
-                file=sys.stderr,
-            )
-            return
+        X_train, X_test, y_train, y_test = None, None, None, None
+        X_nn_train, X_nn_test, y_nn_train, y_nn_test = None, None, None, None
 
-        preprocessing.train_and_save_embeddings()
-
-        if args.load_data:
-            X, y = preprocessing.load_training_data()
-            if X is None or y is None:
-                print(
-                    "Could not load training data from disk. Generating from JSON...",
-                    file=sys.stderr,
-                )
-                X, y = preprocessing.generate_embedded_training_set(data)
-        else:  
-            X, y = preprocessing.generate_embedded_training_set(data)
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.25, random_state=config.RANDOM_STATE
+        # Define which models need which data
+        need_standard_data = (
+            args.train_all or args.train_rbf or args.train_logreg or args.train_mlp or 
+            args.train_tree or args.train_cat or 
+            args.load_all or args.load_rbf or args.load_logreg or args.load_mlp or 
+            args.load_tree or args.load_cat
         )
+
+        need_nn_data = (args.train_all or args.train_nn or args.load_all or args.load_nn)
+
+        # Load Raw JSON only if we need to generate data for at least one group
+        data = None
+        def get_json_data():
+            nonlocal data
+            if data is None:
+                print("Loading raw match data from clean_train.json...", file=sys.stderr)
+                try:
+                    with open(
+                        os.path.join(config.DATA_FOLDER, "clean_train.json"),
+                        encoding=config.DEFAULT_ENCODING,
+                    ) as f:
+                        data = json.load(f)
+                except Exception as e:
+                    print(f"Could not load clean_train.json: {e}", file=sys.stderr)
+                    sys.exit(1)
+            return data
+
+        # ==========================================
+        # 1. Standard Data Generation (Multi-hot/Embedded)
+        # ==========================================
+        if need_standard_data:
+            X, y = None, None
+        
+            # A. Try loading from disk
+            if args.load_data:
+                X, y = preprocessing.load_training_data()
+        
+            # B. Generate if missing
+            if X is None:
+                if args.load_data:
+                     print("Standard cached data not found. Generating...", file=sys.stderr)
+            
+                # Embeddings/Multi-hot logic
+                preprocessing.train_and_save_embeddings()
+            
+                # This triggers the JSON load only now
+                X, y = preprocessing.generate_embedded_training_set(get_json_data())
+            
+            # C. Split
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.25, random_state=config.RANDOM_STATE
+            )
+
+        # ==========================================
+        # 2. PyTorch Data (IDs + Stats)
+        # ==========================================
+        if need_nn_data:
+            X_nn, y_nn = None, None
+
+            # A. Try loading from disk
+            if args.load_data:
+                X_nn, y_nn = preprocessing.load_pytorch_data()
+
+            # B. Generate if missing
+            if X_nn is None:
+                if args.load_data:
+                    print("PyTorch cached data not found. Generating...", file=sys.stderr)
+            
+                # This triggers JSON load (if it wasn't loaded by standard data above)
+                X_nn, y_nn = preprocessing.generate_pytorch_training_set(get_json_data())
+
+            # C. Split
+            X_nn_train, X_nn_test, y_nn_train, y_nn_test = train_test_split(
+                X_nn, y_nn, test_size=0.25, random_state=config.RANDOM_STATE
+            )
 
     if args.train_all or args.train_tree:
         treePredictor.train(X_train, y_train)
@@ -540,6 +613,30 @@ def main():
         specificity = (
             cm[0][0] / (cm[0][0] + cm[0][1]) if (cm[0][0] + cm[0][1]) > 0 else 0
         )
+        print(f"Precision: {precision:.4f}", file=sys.stderr)
+        print(f"Sensitivity: {sensitivity:.4f}", file=sys.stderr)
+        print(f"Specificity: {specificity:.4f}", file=sys.stderr)
+        print("=" * len(header), file=sys.stderr)
+        print(file=sys.stderr)
+
+    if args.train_all or args.train_nn:
+        torchPredictor.train(X_nn_train, y_nn_train)
+        print(file=sys.stderr)
+        header = "=" * 5 + " PyTorch Siamese Deep Sets Network Predictor " + "=" * 5
+        print(header, file=sys.stderr)
+        print("Total matches to test:", y_nn_test.size, file=sys.stderr)
+        print(file=sys.stderr)
+        accuracy, cm = torchPredictor.evaluate(X_nn_test, y_nn_test)
+        print(f"Accuracy: {accuracy:.4f}", file=sys.stderr)
+        precision = (
+            cm[1][1] / (cm[1][1] + cm[0][1]) if (cm[1][1] + cm[0][1]) > 0 else 0
+        )  # Precision TP / (TP + FP)
+        sensitivity = (
+            cm[1][1] / (cm[1][1] + cm[1][0]) if (cm[1][1] + cm[1][0]) > 0 else 0
+        )  # Sensitivity (Recall) TP / (TP + FN)
+        specificity = (
+            cm[0][0] / (cm[0][0] + cm[0][1]) if (cm[0][0] + cm[0][1]) > 0 else 0
+        )  # Specificity TN / (TN + FP)
         print(f"Precision: {precision:.4f}", file=sys.stderr)
         print(f"Sensitivity: {sensitivity:.4f}", file=sys.stderr)
         print(f"Specificity: {specificity:.4f}", file=sys.stderr)
@@ -734,6 +831,16 @@ def main():
             for threshold in thresholds:
                 count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
                 print_confidence_accuracy(0.5 + threshold, accuracy, count)
+            print(file=sys.stderr)
+
+        if (args.load_all or args.load_nn) or (args.train_all or args.train_nn):
+            print("PyTorch Siamese Net:", file=sys.stderr)
+            # Use X_nn_test
+            probas = torchPredictor.predict_proba(X_nn_test)
+            for threshold in thresholds:
+                # Use y_nn_test
+                count, accuracy = get_confidence_accuracy(probas, y_nn_test, threshold)
+                print_confidence_accuracy(0.5 + threshold, accuracy, count)
 
         print("=" * len(header), file=sys.stderr)
         print(file=sys.stderr)
@@ -795,5 +902,5 @@ if __name__ == "__main__":
     except Exception:
         raise
 
-    print("Press any key to exit...", file=sys.stderr)
-    input()
+    # print("Press any key to exit...", file=sys.stderr)
+    # input()

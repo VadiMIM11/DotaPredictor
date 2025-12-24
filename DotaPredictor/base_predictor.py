@@ -5,6 +5,7 @@ import joblib
 from sklearn.metrics import accuracy_score, confusion_matrix
 import DotaPredictor
 import config
+import preprocessing
 
 class BasePredictor:
     def __init__(self, model, filename):
@@ -51,8 +52,5 @@ class BasePredictor:
              print(f"Match id {match_id} not found in data", file=sys.stderr)
              return None
         
-        X = DotaPredictor.generate_feature_vector(match)
-        feature_vector_2d = [feature_vector]
-        scaler = joblib.load(os.path.join(config.MODELS_FOLDER, "scaler.joblib"))
-        feature_vector = scaler.transform(feature_vector_2d)
-        return self.predict_proba([X])[0]
+        X = preprocessing.generate_multihot_fv(match)
+        return self.predict_proba(X)[0]

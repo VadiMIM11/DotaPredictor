@@ -6,6 +6,7 @@ import json
 
 import DotaPredictor
 import config
+import preprocessing
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -114,9 +115,6 @@ def predict_by_match_id(m_id):
         print("Try fetching hero stats from stratz using --update", file=sys.stderr)
         exit(1)
     match = DotaPredictor.get_match_by_id(m_id)
-    feature_vector = DotaPredictor.generate_feature_vector(match)
-    feature_vector_2d = [feature_vector]
-    scaler = joblib.load(os.path.join(config.MODELS_FOLDER, "scaler.joblib"))
-    feature_vector = scaler.transform(feature_vector_2d)
+    feature_vector = preprocessing.generate_multihot_fv(match)
     return predict(feature_vector, all_stats)
 

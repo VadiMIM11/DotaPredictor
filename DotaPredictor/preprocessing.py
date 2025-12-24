@@ -129,12 +129,7 @@ def generate_multihot_training_set(matches_json):
         y_list.append(label)
     X = np.array(X_list)
     y = np.array(y_list)
-    if not os.path.exists(config.MODELS_FOLDER):
-        os.makedirs(config.MODELS_FOLDER)
-        print(f"Created folder: {config.MODELS_FOLDER}", file=sys.stderr)
-    path = os.path.join(config.MODELS_FOLDER, "scaler.joblib")
-    dump(scaler, path)
-    print(f"Model saved in '{path}'", file=sys.stderr)
+
     return X, y
 
 def get_label(match_json):
@@ -193,7 +188,66 @@ def generate_embedded_training_set(matches_json):
 
     return X, y
 
+def generate_pytorch_vector(match_json):
+    r_ids, d_ids = extract_hero_ids_from_json(match_json)
+    
+    # Pad/Trim to 5
+    r_vec = [int(x) for x in r_ids][:5] + [0]*(5-len(r_ids))
+    d_vec = [int(x) for x in d_ids][:5] + [0]*(5-len(d_ids))
+    
+    avg_wr_with = algPredictor.get_avg_wr_with(r_ids, d_ids, load_stats())
+    avg_wr_against = algPredictor.get_avg_wr_against(r_ids, d_ids, load_stats())
+    stats_prediction = algPredictor.sigmoid((avg_wr_with + avg_wr_against) / 2.0)
+    stats_components = [avg_wr_with, avg_wr_against, stats_prediction]
+    
+    # Result is now length: 5 + 5 + 3
+    return np.array(r_vec + d_vec + stats_components)
 
+def generate_pytorch_training_set(data):
+    matches = data.get("data")
+    X_list = []
+    y_list = []
+    
+    print("Generating PyTorch training set...", file=sys.stderr)
+    
+    iterator = tqdm.tqdm(matches.items()) if matches else []
+    
+    for key, match in iterator:
+        try:
+            feature_vector = generate_pytorch_vector(match)
+            label = get_label(match)
+            
+            X_list.append(feature_vector)
+            y_list.append(label)
+        except Exception:
+            # Skip matches where algPredictor fails (e.g., missing hero stats)
+            continue
+            
+    X_nn = np.array(X_list)
+    y_nn = np.array(y_list)
+    
+    save_pytorch_data(X_nn, y_nn)
+    
+    return X_nn, y_nn
+
+def save_pytorch_data(X, y):
+    if not os.path.exists(config.DATA_FOLDER):
+        os.makedirs(config.DATA_FOLDER)
+    
+    # Save with a distinct filename so it doesn't overwrite standard models
+    dump(X, os.path.join(config.DATA_FOLDER, 'X_nn_data.joblib'))
+    dump(y, os.path.join(config.DATA_FOLDER, 'y_nn_data.joblib'))
+    print("PyTorch training data (X_nn, y_nn) saved to disk.", file=sys.stderr)
+
+def load_pytorch_data():
+    try:
+        X = joblib.load(os.path.join(config.DATA_FOLDER, 'X_nn_data.joblib'))
+        y = joblib.load(os.path.join(config.DATA_FOLDER, 'y_nn_data.joblib'))
+        print("Loaded PyTorch training data (X_nn, y_nn) from disk.", file=sys.stderr)
+        return X, y
+    except (FileNotFoundError, OSError):
+        # Fail silently so we can generate from JSON if needed
+        return None, None
 def train_and_save_embeddings():
     print("Loading raw match data...", file=sys.stderr)
 
