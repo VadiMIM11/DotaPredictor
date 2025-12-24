@@ -21,11 +21,12 @@ def getWinrateWith(hero1, hero2, all_stats):
     hero2 = int(hero2)
     hero1_matchups = all_stats["data"]["heroStats"].get(f"hero{hero1}MatchUp")
     if not hero1_matchups:
-        print(f"No data for hero {hero1}", file=sys.stderr)
-        exit(1)
+        #print(f"Warning: No data for hero {hero1}, Returning 50%", file=sys.stderr)
+        return logit(0.5)
     if hero1 == hero2:
         float_wr = float(hero1_matchups[0]["winRate"])
         return logit(float_wr)
+    
     for entry in hero1_matchups:
         if entry["heroId"] == hero1:
             for with_entry in entry["with"]:
@@ -37,22 +38,27 @@ def getWinrateWith(hero1, hero2, all_stats):
         else:
             print(f"Hero id mismatch: hero{entry["heroId"]}MatchUp entry has heroId: {hero1}", file=sys.stderr)
             exit(1)
+    #print(f"Warning: winrate with not found for {hero1} and {hero2}. Returning 50%", file=sys.stderr)
+    return logit(0.5)  # Neutral if no data
+
 
 def getWinrateAgainst(hero1, hero2, all_stats):
     hero1 = int(hero1)
     hero2 = int(hero2)
     hero1_matchups = all_stats["data"]["heroStats"].get(f"hero{hero1}MatchUp")
     if not hero1_matchups:
-        print(f"No data for hero {hero1}", file=sys.stderr)
-        exit(1)
+        #print(f"Warning: No data for hero {hero1}, Returning 50%", file=sys.stderr)
+        return logit(0.5)
     for entry in hero1_matchups:
         if entry["heroId"] == hero1:
             for with_entry in entry["vs"]:
                 if with_entry["heroId2"] == hero2:
                     return logit(with_entry["winsAverage"])
         else:
-            print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}", file=sys.stderr)
+            print(f"Hero id mismatch: hero{entry["heroId"]}MatchUp entry has heroId: {hero1}", file=sys.stderr)
             exit(1)
+    #print(f"Warning: winrate against not found for {hero1} and {hero2}. Returning 50%", file=sys.stderr)
+    return logit(0.5)  # Neutral if no data
     
 def get_avg_wr_with(radiantHeroes, direHeroes, all_stats):
 
