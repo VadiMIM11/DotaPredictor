@@ -13,7 +13,7 @@
     <RootNamespace>DotaPredictor</RootNamespace>
     <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>--filter --stratz  ./data/token --test_calibration  --train_all</CommandLineArguments>
+    <CommandLineArguments>--filter --stratz  ./data/token --test_calibration  --train_cat --load_data --load_mlp --load_rbf</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <InterpreterPath>./env/Scripts/python.exe</InterpreterPath>
   </PropertyGroup>
@@ -28,7 +28,7 @@
   <ItemGroup>
     <Compile Include="algPredictor.py" />
     <Compile Include="base_predictor.py" />
-    <Compile Include="catBoostPredictor.py" />
+    <Compile Include="catPredictor.py" />
     <Compile Include="config.py" />
     <Compile Include="DotaPredictor.py" />
     <Compile Include="logRegPredictor.py" />
