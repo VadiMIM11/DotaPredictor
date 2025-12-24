@@ -2,8 +2,10 @@ import argparse
 import sys
 from typing import Required
 from urllib import request
+from gensim.models import Word2Vec
 import numpy as np
 import algPredictor
+import preprocessing
 import stratzQueries as sq
 import json
 import os
@@ -21,50 +23,6 @@ rbfPredictor = RbfPredictor()
 mlpPredictor = MlpPredictor()
 treePredictor = TreePredictor()
 
-
-def extract_hero_ids(feature_vector):
-    radiant_heroes = [i for i, val in enumerate(feature_vector) if val == 1]
-    dire_heroes = [i for i, val in enumerate(feature_vector) if val == -1]
-    return radiant_heroes, dire_heroes
-
-
-def generate_feature_vector(match_json):
-    feture_vector = np.zeros(config.MAX_HERO_ID + 1, dtype=int)
-    if match_json.get("pickBans") is None:
-        print("No pickBans in match:", match_json["id"], file=sys.stderr)
-        raise ValueError("No pickBans in match")
-    for pick in match_json["pickBans"]:
-        if pick["isPick"] is True:
-            hero_id = pick["heroId"]
-            if hero_id < 1 or hero_id > config.MAX_HERO_ID:
-                print("Hero id out of range:", hero_id, file=sys.stderr)
-                raise ValueError("Hero id out of range")
-            feture_vector[hero_id] = 1 if pick["isRadiant"] else -1
-    return feture_vector
-
-
-def get_label(match_json):
-    if match_json.get("didRadiantWin") is None:
-        print("No match result in match:", match_json["id"], file=sys.stderr)
-        raise ValueError("No match result")
-    if match_json["didRadiantWin"]:
-        return 1
-    else:
-        return -1
-
-
-def generate_treining_set(matches_json):
-    matches = matches_json.get("data")
-    X_list = []
-    y_list = []
-    for key, match in matches.items():
-        feature_vector = generate_feature_vector(match)
-        label = get_label(match)
-        X_list.append(feature_vector)
-        y_list.append(label)
-    X = np.array(X_list)
-    y = np.array(y_list)
-    return X, y
 
 
 def update_local_stats(api_token):
@@ -209,6 +167,24 @@ def get_confidence_accuracy(probas, y_test, confidence_threshold):
     count = hit + miss
     return count, accuracy
 
+def load_embedding_model():
+    global EMBEDDING_MODEL
+    if EMBEDDING_MODEL is None:
+        path = os.path.join(config.MODELS_FOLDER, "embeddings.model")
+        print(f"Loading embeddings from {path}...", file=sys.stderr)
+        try:
+            EMBEDDING_MODEL = Word2Vec.load(path)
+            print("Embeddings loaded successfully.", file=sys.stderr)
+        except Exception as e:
+            print(f"Error loading embeddings: {e}", file=sys.stderr)
+            print("Did you run preprocessing.py?", file=sys.stderr)
+            sys.exit(1)
+    return EMBEDDING_MODEL
+
+
+global X_train, X_test, y_train, y_test
+X_train = X_test = y_train = y_test = None
+EMBEDDING_MODEL = None
 
 def main():
     parser = argparse.ArgumentParser(
@@ -387,9 +363,6 @@ def main():
     if args.filter:
         clean_train()
 
-    global X_train, X_test, y_train, y_test
-    X_train = X_test = y_train = y_test = None
-
     if (
         args.load_all
         or args.load_rbf
@@ -416,7 +389,9 @@ def main():
             )
             return
 
-        X, y = generate_treining_set(data)
+
+        preprocessing.train_and_save_embeddings()
+        X, y = preprocessing.generate_treining_set(data)
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.25, random_state=config.RANDOM_STATE
         )
@@ -506,7 +481,6 @@ def main():
         print(header, file=sys.stderr)
         print("Total matches to test:", y_test.size, file=sys.stderr)
         print(file=sys.stderr)
-        accuracy, cm = mlpPredictor.evaluate(X_test, y_test, file=sys.stderr)
         accuracy, cm = mlpPredictor.evaluate(X_test, y_test)
         print(f"Accuracy: {accuracy:.4f}", file=sys.stderr)
         # print("True Negatives:", cm[0][0])
@@ -565,8 +539,6 @@ def main():
         outdrafted = []
         for match_key, match_value in tqdm(matches.items()):
             try:
-                feature_vector = generate_feature_vector(match_value)
-                predicted_prob = predict(feature_vector, all_stats)
                 #feature_vector = generate_feature_vector(match_value)
                 r_ids, d_ids = preprocessing.extract_radiant_hero_ids_from_json(match_value)
                 predicted_prob = algPredictor.predict(r_ids, d_ids, all_stats)

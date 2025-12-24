@@ -28,10 +28,12 @@
   <ItemGroup>
     <Compile Include="algPredictor.py" />
     <Compile Include="base_predictor.py" />
+    <Compile Include="catBoostPredictor.py" />
     <Compile Include="config.py" />
     <Compile Include="DotaPredictor.py" />
     <Compile Include="logRegPredictor.py" />
     <Compile Include="mlpPredictor.py" />
+    <Compile Include="preprocessing.py" />
     <Compile Include="stratzQueries.py" />
     <Compile Include="rbfPredictor.py" />
     <Compile Include="treePredictor.py" />
