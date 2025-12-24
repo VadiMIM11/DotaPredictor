@@ -17,12 +17,14 @@ from logRegPredictor import LogRegPredictor
 from rbfPredictor import RbfPredictor
 from mlpPredictor import MlpPredictor
 from treePredictor import TreePredictor
+from catPredictor import CatPredictor
+
 
 logRegPredictor = LogRegPredictor()
 rbfPredictor = RbfPredictor()
 mlpPredictor = MlpPredictor()
 treePredictor = TreePredictor()
-
+catPredictor = CatPredictor()
 
 
 def update_local_stats(api_token):
@@ -167,6 +169,7 @@ def get_confidence_accuracy(probas, y_test, confidence_threshold):
     count = hit + miss
     return count, accuracy
 
+
 def load_embedding_model():
     global EMBEDDING_MODEL
     if EMBEDDING_MODEL is None:
@@ -185,6 +188,7 @@ def load_embedding_model():
 global X_train, X_test, y_train, y_test
 X_train = X_test = y_train = y_test = None
 EMBEDDING_MODEL = None
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -224,10 +228,20 @@ def main():
     )
 
     parser.add_argument(
+        "--load_data",
+        action="store_true",
+        help="Load feature vectors (X, y) from disk instead of generating them from JSON",
+        required=False,
+    )
+    parser.add_argument(
         "--load_all",
         action="store_true",
         required=False,
         help="Load all models (Logistic Regression, RBF SVM, MLP, Decision Tree) from disk",
+    )
+
+    parser.add_argument(
+        "--load_cat", action="store_true", help="Load CatBoost model from disk"
     )
 
     parser.add_argument(
@@ -264,6 +278,8 @@ def main():
         required=False,
         help="Train all models (Logistic Regression, RBF SVM, MLP, Decision Tree) on training dataset",
     )
+
+    parser.add_argument("--train_cat", action="store_true", help="Train CatBoost model")
 
     parser.add_argument(
         "--train_logreg",
@@ -315,6 +331,7 @@ def main():
         or args.load_rbf
         or args.load_mlp
         or args.load_tree
+        or args.load_cat
     ):
         if args.load_all or args.load_logreg:
             logRegPredictor.load_model()
@@ -327,6 +344,9 @@ def main():
 
         if args.load_all or args.load_tree:
             treePredictor.load_model()
+
+        if args.load_all or args.load_cat:
+            catPredictor.load_model()
 
     if args.stratz:
         print("Stratz API token file path:", args.stratz, file=sys.stderr)
@@ -375,6 +395,7 @@ def main():
         or args.train_logreg
         or args.train_mlp
         or args.train_tree
+        or args.train_cat
     ):
         try:
             with open(
@@ -391,8 +412,16 @@ def main():
 
         preprocessing.train_and_save_embeddings()
 
-        X, y = preprocessing.generate_treining_set(data)
-
+        if args.load_data:
+            X, y = preprocessing.load_training_data()
+            if X is None or y is None:
+                print(
+                    "Could not load training data from disk. Generating from JSON...",
+                    file=sys.stderr,
+                )
+                X, y = preprocessing.generate_embedded_training_set(data)
+        else:  
+            X, y = preprocessing.generate_embedded_training_set(data)
 
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.25, random_state=config.RANDOM_STATE
@@ -421,6 +450,21 @@ def main():
         print(f"Specificity: {specificity:.4f}", file=sys.stderr)
         print("=" * len(header), file=sys.stderr)
         print(file=sys.stderr)
+
+    if args.train_all or args.train_cat:
+        catPredictor.train(X_train, y_train)
+        print(file=sys.stderr)
+        header = "=" * 5 + " CatBoost Predictor " + "=" * 5
+        print(header, file=sys.stderr)
+        accuracy, cm = catPredictor.evaluate(X_test, y_test)
+        print(f"Accuracy: {accuracy:.4f}", file=sys.stderr)
+        precision = cm[1][1] / (cm[1][1] + cm[0][1]) if (cm[1][1] + cm[0][1]) > 0 else 0
+        sensitivity = cm[1][1] / (cm[1][1] + cm[1][0]) if (cm[1][1] + cm[1][0]) > 0 else 0
+        specificity = cm[0][0] / (cm[0][0] + cm[0][1]) if (cm[0][0] + cm[0][1]) > 0 else 0
+        print(f"Precision: {precision:.4f}", file=sys.stderr)
+        print(f"Sensitivity: {sensitivity:.4f}", file=sys.stderr)
+        print(f"Specificity: {specificity:.4f}", file=sys.stderr)
+        print("=" * len(header), file=sys.stderr)
 
     if args.train_all or args.train_logreg:
         logRegPredictor.train(X_train, y_train)
@@ -541,8 +585,10 @@ def main():
         outdrafted = []
         for match_key, match_value in tqdm(matches.items()):
             try:
-                #feature_vector = generate_feature_vector(match_value)
-                r_ids, d_ids = preprocessing.extract_radiant_hero_ids_from_json(match_value)
+                # feature_vector = generate_feature_vector(match_value)
+                r_ids, d_ids = preprocessing.extract_radiant_hero_ids_from_json(
+                    match_value
+                )
                 predicted_prob = algPredictor.predict(r_ids, d_ids, all_stats)
                 didRadiantWin = match_value.get("didRadiantWin")
                 if didRadiantWin is None:
@@ -637,7 +683,10 @@ def main():
                     all_stats = json.load(f)
             except IOError as e:
                 print(f"Could not access hero stats file: {e}", file=sys.stderr)
-                print("Try fetching hero stats from stratz using --update", file=sys.stderr)
+                print(
+                    "Try fetching hero stats from stratz using --update",
+                    file=sys.stderr,
+                )
                 exit(1)
 
             for i in range(len(X_test)):
@@ -678,8 +727,17 @@ def main():
                 count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
                 print_confidence_accuracy(0.5 + threshold, accuracy, count)
             print(file=sys.stderr)
+
+        if (args.load_all or args.load_cat) or (args.train_all or args.train_cat):
+            print("CatBoost Predictor:", file=sys.stderr)
+            probas = catPredictor.predict_proba(X_test)
+            for threshold in thresholds:
+                count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
+                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+
         print("=" * len(header), file=sys.stderr)
         print(file=sys.stderr)
+
 
     def predict_by_id(m_id):
         # m_id = 8525383837
@@ -712,11 +770,18 @@ def main():
                 file=sys.stderr,
             )
             print(f"{logRegPredictor.filename}: {prob[1]}", file=sys.stdout)
+
+        if (args.load_all or args.load_cat) or (args.train_all or args.train_cat):
+             prob = catPredictor.predict_by_match_id(m_id)
+             print(f"CatBoost: {m_id} -> Radiant Win with {(prob[1] * 100):.4f}%", file=sys.stderr)
+             print(f"{catPredictor.filename}: {prob[1]}", file=sys.stdout)
+
         prob = algPredictor.predict_by_match_id(m_id)
         print(
             f"Statistical: {m_id} -> Radiant Win with {(prob * 100):.4f}%",
             file=sys.stderr,
         )
+
         # print(f"Statistical: {prob}", file=sys.stdout)
         print(file=sys.stderr)
 
