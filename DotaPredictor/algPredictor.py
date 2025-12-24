@@ -53,19 +53,9 @@ def getWinrateAgainst(hero1, hero2, all_stats):
             print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}", file=sys.stderr)
             exit(1)
     
-
-def predict(radiant_ids, dire_ids, all_stats):
-    radiantHeroes = radiant_ids
-    direHeroes = dire_ids
-    
-    if len(radiantHeroes) != 5 or len(direHeroes) != 5:
-        print("Invalid team format: ", radiantHeroes, direHeroes, file=sys.stderr)
-        raise ValueError("Invalid team format")
-
+def get_avg_wr_with(radiant_ids, dire_ids, all_stats):
     wr_with_sum = 0.0
-    wr_against_sum = 0.0
     countWith = 0
-    countAgainst = 0
     for i in range(0, len(radiantHeroes)):
         for j in range(i, len(radiantHeroes)):
             wr = getWinrateWith(radiantHeroes[i], radiantHeroes[j], all_stats)
@@ -77,7 +67,11 @@ def predict(radiant_ids, dire_ids, all_stats):
         raise ValueError("No 'with' data found")
 
     avg_wr_with = wr_with_sum / countWith
+    return avg_wr_with
 
+def get_avg_wr_against(radiant_ids, dire_ids, all_stats):
+    wr_against_sum = 0.0
+    countAgainst = 0
     for i in range(0, len(radiantHeroes)):
         for j in range(0, len(direHeroes)):
             wr = getWinrateAgainst(radiantHeroes[i], direHeroes[j], all_stats)
@@ -87,7 +81,20 @@ def predict(radiant_ids, dire_ids, all_stats):
 
     if countAgainst == 0:
         raise ValueError("No 'against' data found")
+
     avg_wr_against = wr_against_sum / countAgainst
+    return avg_wr_against
+
+def predict(radiant_ids, dire_ids, all_stats):
+    radiantHeroes = radiant_ids
+    direHeroes = dire_ids
+    
+    if len(radiantHeroes) != 5 or len(direHeroes) != 5:
+        print("Invalid team format: ", radiantHeroes, direHeroes, file=sys.stderr)
+        raise ValueError("Invalid team format")
+
+    avg_wr_with = get_avg_wr_with(radiantHeroes, direHeroes, all_stats)
+    avg_wr_against = get_avg_wr_against(radiantHeroes, direHeroes, all_stats)
 
     final_prediction = sigmoid((avg_wr_with + avg_wr_against) / 2.0)
     return final_prediction
