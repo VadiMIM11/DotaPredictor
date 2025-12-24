@@ -83,9 +83,11 @@ def generate_feature_vector(match_json):
         if h_id in model.wv:
             dire_vec += model.wv[h_id]
 
-    stat_prob = algPredictor.predict(r_ids, d_ids, stats)
+    avg_wr_with = algPredictor.get_avg_wr_with(r_ids, d_ids, stats)
+    avg_wr_against = algPredictor.get_avg_wr_against(r_ids, d_ids, stats)
+    stat_prob = algPredictor.sigmoid((avg_wr_with + avg_wr_against) / 2.0)
             
-    return np.concatenate([rad_vec, dire_vec, [stat_prob]])
+    return np.concatenate([rad_vec, dire_vec, [stat_prob], [avg_wr_with], [avg_wr_against]])
 
 def get_label(match_json):
     if match_json.get("didRadiantWin") is None:

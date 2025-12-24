@@ -53,7 +53,12 @@ def getWinrateAgainst(hero1, hero2, all_stats):
             print(f"Hero id mismatch: hero{hero1}MatchUp entry has heroId: {hero1}", file=sys.stderr)
             exit(1)
     
-def get_avg_wr_with(radiant_ids, dire_ids, all_stats):
+def get_avg_wr_with(radiantHeroes, direHeroes, all_stats):
+
+    if len(radiantHeroes) != 5 or len(direHeroes) != 5:
+        print("Invalid team format: ", radiantHeroes, direHeroes, file=sys.stderr)
+        raise ValueError("Invalid team format")
+
     wr_with_sum = 0.0
     countWith = 0
     for i in range(0, len(radiantHeroes)):
@@ -69,7 +74,12 @@ def get_avg_wr_with(radiant_ids, dire_ids, all_stats):
     avg_wr_with = wr_with_sum / countWith
     return avg_wr_with
 
-def get_avg_wr_against(radiant_ids, dire_ids, all_stats):
+def get_avg_wr_against(radiantHeroes, direHeroes, all_stats):
+
+    if len(radiantHeroes) != 5 or len(direHeroes) != 5:
+        print("Invalid team format: ", radiantHeroes, direHeroes, file=sys.stderr)
+        raise ValueError("Invalid team format")
+
     wr_against_sum = 0.0
     countAgainst = 0
     for i in range(0, len(radiantHeroes)):
@@ -88,10 +98,6 @@ def get_avg_wr_against(radiant_ids, dire_ids, all_stats):
 def predict(radiant_ids, dire_ids, all_stats):
     radiantHeroes = radiant_ids
     direHeroes = dire_ids
-    
-    if len(radiantHeroes) != 5 or len(direHeroes) != 5:
-        print("Invalid team format: ", radiantHeroes, direHeroes, file=sys.stderr)
-        raise ValueError("Invalid team format")
 
     avg_wr_with = get_avg_wr_with(radiantHeroes, direHeroes, all_stats)
     avg_wr_against = get_avg_wr_against(radiantHeroes, direHeroes, all_stats)
