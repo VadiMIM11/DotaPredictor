@@ -2,6 +2,7 @@ import json
 import os
 import sys
 from joblib import dump
+import joblib
 import numpy as np
 from gensim.models import Word2Vec
 from sklearn.model_selection import train_test_split
@@ -66,7 +67,6 @@ def load_data_from_file():
         path = os.path.join(config.DATA_FOLDER, "clean_train.json")
         with open(path, encoding=config.DEFAULT_ENCODING) as f:
             data = json.load(f)
-        return generate_treining_set(data)  # Returns X, y
         return generate_embedded_training_set(data)  # Returns X, y
     except Exception as e:
         print(f"Error loading data: {e}", file=sys.stderr)
@@ -79,7 +79,6 @@ def load_data_from_file():
 #     return radiant_heroes, dire_heroes
 
 
-def generate_feature_vector(match_json):
 def generate_embedding(match_json):
     model = DotaPredictor.load_embedding_model()
     r_ids, d_ids = extract_hero_ids_from_json(match_json)
@@ -147,14 +146,30 @@ def get_label(match_json):
     else:
         return -1
 
+def save_training_data(X, y):
+    if not os.path.exists(config.DATA_FOLDER):
+        os.makedirs(config.DATA_FOLDER)
+    
+    # Save X and y
+    dump(X, os.path.join(config.DATA_FOLDER, 'X_data.joblib'))
+    dump(y, os.path.join(config.DATA_FOLDER, 'y_data.joblib'))
+    print("Training data saved to disk.", file=sys.stderr)
 
-def generate_treining_set(matches_json):
+def load_training_data():
+    try:
+        X = joblib.load(os.path.join(config.DATA_FOLDER, 'X_data.joblib'))
+        y = joblib.load(os.path.join(config.DATA_FOLDER, 'y_data.joblib'))
+        print("Loaded training data (X, y) from disk.", file=sys.stderr)
+        return X, y
+    except (FileNotFoundError, OSError):
+        print("Cached training data not found. Please regenerate.", file=sys.stderr)
+        return None, None
+
 def generate_embedded_training_set(matches_json):
     matches = matches_json.get("data")
     X_list = []
     y_list = []
     for key, match in tqdm.tqdm(matches.items()):
-        feature_vector = generate_feature_vector(match)
         feature_vector = generate_embedding(match)
         label = get_label(match)
         X_list.append(feature_vector)
@@ -173,6 +188,8 @@ def generate_embedded_training_set(matches_json):
     path = os.path.join(config.MODELS_FOLDER, "scaler.joblib")
     dump(scaler, path)
     print(f"Model saved in '{path}'", file=sys.stderr)
+
+    save_training_data(X, y)
 
     return X, y
 
