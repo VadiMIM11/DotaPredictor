@@ -1,6 +1,7 @@
 import os
 import sys
 from joblib import dump, load
+import joblib
 from sklearn.metrics import accuracy_score, confusion_matrix
 import DotaPredictor
 import config
@@ -51,4 +52,7 @@ class BasePredictor:
              return None
         
         X = DotaPredictor.generate_feature_vector(match)
+        feature_vector_2d = [feature_vector]
+        scaler = joblib.load(os.path.join(config.MODELS_FOLDER, "scaler.joblib"))
+        feature_vector = scaler.transform(feature_vector_2d)
         return self.predict_proba([X])[0]
