@@ -1,13 +1,14 @@
 DATA_FOLDER = 'data'
 MODELS_FOLDER = 'models'
 DEFAULT_ENCODING = 'utf-8'
-FETCH_TRAIN_SIZE = 200000
+FETCH_TRAIN_SIZE = 500000
 MAX_MATCHES_IN_QUERY = 1750 # MAX ~2000
 LATEST_MATCH_ID = 8619485947
-MIN_RANK = 3 # [0..8] 0 = Uncalibrated, 1 = Herald, 8 = Immortal
+MIN_RANK = 5 # [0..8] 0 = Uncalibrated, 1 = Herald, 8 = Immortal
 RANKED_ONLY = False
 GAMEMODES = ["ALL_PICK", "ALL_PICK_RANKED", "RANDOM_DRAFT", "SINGLE_DRAFT", "CAPTAINS_MODE"]
 NUM_HEROES = 127
 MAX_HERO_ID = 155
 API_TOKEN = "" # do not set token here use CLI arguments instead
 RANDOM_STATE = 42
+TIMEOUT_ON_QUERY_FAIL = 30 # how many seconds to wait before executing next query when one fails

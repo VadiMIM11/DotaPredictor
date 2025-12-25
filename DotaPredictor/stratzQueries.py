@@ -4,6 +4,7 @@ import requests
 import json
 import os
 import copy
+import time
 from tqdm import tqdm
 
 import config
@@ -168,10 +169,10 @@ def fetch_all_winrates(api_token):
 
         return response.json()
     else:
-        print("Query failed with code:", response.status_code, file=sys.stderr)
-        raise Exception(
-            f"Query failed with status code {response.status_code}: {response.text}"
-        )
+        #print("Query failed with code:", response.status_code, file=sys.stderr)
+        print(f"Query failed with status code {response.status_code}: {response.text}", file=sys.stderr)
+        return None
+
 
 
 def fetch_train(api_token):
@@ -200,15 +201,15 @@ def fetch_train(api_token):
 
         if response.status_code == 200:
             # print("Success! Fetched training set!")
-            pass
+            current_json = combine_query_response(current_json, response.json())
         else:
-            print("Query failed with code:", response.status_code)
+            #print("Query failed with code:", response.status_code)
             # print("Skipping...")
-            raise Exception(
-                f"Query failed with status code {response.status_code}: {response.text}"
-            )
+            print(f"Query failed with status code {response.status_code}: {response.text}")
+            print("Waiting for 5 seconds...")
+            time.sleep(config.TIMEOUT_ON_QUERY_FAIL)
+            
         current_latest_id -= config.MAX_MATCHES_IN_QUERY
-        current_json = combine_query_response(current_json, response.json())
 
     batch_size = config.FETCH_TRAIN_SIZE % config.MAX_MATCHES_IN_QUERY
     if batch_size > 0:
@@ -220,12 +221,12 @@ def fetch_train(api_token):
         )
         if response.status_code == 200:
             print("Success! Fetched training set!")
+            current_json = combine_query_response(current_json, response.json())
         else:
-            print("Query failed with code:", response.status_code)
-            raise Exception(
-                f"Query failed with status code {response.status_code}: {response.text}"
-            )
-        current_json = combine_query_response(current_json, response.json())
+            #print("Query failed with code:", response.status_code)
+            print(f"Query failed with status code {response.status_code}: {response.text}")
+            print("Waiting for 5 seconds...")
+            time.sleep(config.TIMEOUT_ON_QUERY_FAIL)
 
     return current_json
 
