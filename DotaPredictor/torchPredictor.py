@@ -154,6 +154,12 @@ class TorchPredictor:
         for epoch in range(epochs):
             total_loss = 0
             for r_batch, d_batch, s_batch, y_batch in loader:
+                if np.random.rand() > 0.5: # mask 50% of batches
+                    # Create a mask to zero out some heroes
+                    mask_r = torch.bernoulli(torch.full_like(r_batch, 0.7, dtype=torch.float)).long() # Keep 70% of heroes
+                    mask_d = torch.bernoulli(torch.full_like(d_batch, 0.7, dtype=torch.float)).long()
+                    r_batch = r_batch * mask_r
+                    d_batch = d_batch * mask_d
                 optimizer.zero_grad()
                 outputs = self.model(r_batch, d_batch, s_batch)
                 loss = criterion(outputs, y_batch)
