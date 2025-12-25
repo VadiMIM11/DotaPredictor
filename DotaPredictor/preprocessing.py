@@ -248,6 +248,9 @@ def load_pytorch_data():
     except (FileNotFoundError, OSError):
         # Fail silently so we can generate from JSON if needed
         return None, None
+
+
+
 def train_and_save_embeddings():
     print("Loading raw match data...", file=sys.stderr)
 
@@ -259,17 +262,21 @@ def train_and_save_embeddings():
     # 2. Extract IDs directly from JSON
     for match in matches:
         r_ids, d_ids = extract_hero_ids_from_json(match)
-
+        label = get_label(match)
+        # If Radiant Won, add "WIN" token to Radiant team, "LOSS" to Dire team
+        r_label = "WIN" if label == 1 else "LOSS"
+        d_label = "LOSS" if label == 1 else "WIN"
         # Add as two separate sentences (Team logic)
         if len(r_ids) == 5:
-            sentences.append(r_ids)
+            # [Hero1, Hero2, ..., Hero5, "WIN"]
+            sentences.append(r_ids + [r_label]) 
         else:
             print(
                 f"Warning: Skipping Radiant team with {len(r_ids)} heroes.",
                 file=sys.stderr,
             )
         if len(d_ids) == 5:
-            sentences.append(d_ids)
+            sentences.append(d_ids + [d_label])
         else:
             print(
                 f"Warning: Skipping Dire team with {len(d_ids)} heroes.",
@@ -279,7 +286,7 @@ def train_and_save_embeddings():
     print(f"Training on {len(sentences)} teams...", file=sys.stderr)
 
     # 3. Train
-    model = Word2Vec(sentences, vector_size=16, window=5, min_count=1, workers=4)
+    model = Word2Vec(sentences, vector_size=16, window=6, min_count=1, workers=4)
 
     # 4. Save
     if not os.path.exists(config.MODELS_FOLDER):
