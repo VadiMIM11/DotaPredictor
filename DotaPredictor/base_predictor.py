@@ -18,7 +18,7 @@ class BasePredictor:
             self.model = load(path)
             print(f"Loaded {self.filename}", file=sys.stderr)
         except (OSError, ValueError) as e:
-            print(f"Could not load {self.filename}: {e}", file=sys.stderr)
+            print(f"Could not load {self.filename}: {e}. Did you train the model first?", file=sys.stderr)
 
     def train(self, X_train, y_train):
         print(f"Training {self.filename}...", file=sys.stderr)
