@@ -1,4 +1,5 @@
 import argparse
+import re
 import sys
 from typing import Required
 from urllib import request
@@ -54,7 +55,7 @@ def update_local_stats(api_token):
     print(f"Fetched stats for {num_fetched} heroes", file=sys.stderr)
     if num_fetched != config.NUM_HEROES:
         print(
-            f"Warning: Expected {config.NUM_HEROES} heroes, but got {num_fetched}.",
+            f"Warning: Expected {config.NUM_HEROES} heroes, but got {num_fetched}. New hero came out? Delete hero_ids.json and update config",
             file=sys.stderr,
         )
 
@@ -186,6 +187,23 @@ def load_embedding_model():
             print("Did you run preprocessing.py?", file=sys.stderr)
             sys.exit(1)
     return EMBEDDING_MODEL
+
+# Uses PyTorch Siamese Deep Sets Network predictor since it is the best one yet
+def predict_by_hero_list(hero_list_str):
+    print(f"Predict match for hero list: {hero_list_str}", file=sys.stderr)
+    hero_ids = [int(h_id) for h_id in re.split(r"[,\s]+", hero_list_str.strip())]
+    if len(hero_ids) != 10:
+        print(f"Error: received {len(hero_ids)} heroes instead of 10. To enter a partial draft use '0' for empty slots", file=sys.stderr)
+        return
+    r_ids = hero_ids[:5]
+    d_ids = hero_ids[5:]
+        
+    fv = preprocessing.generate_pytorch_vector_by_hero_ids(r_ids, d_ids)
+    probs = torchPredictor.predict_proba(fv)
+    win_prob = probs[0][1]
+            
+    print(f"Radiant Win Probability: {win_prob*100:.2f}%")
+    return win_prob
 
 
 global X_train, X_test, y_train, y_test
@@ -340,7 +358,15 @@ def main():
         help="Test calibration of models on test dataset",
     )
 
+    parser.add_argument(
+        "--predict",
+        type=str,
+        required=False,
+        help="Predict match outcome by providing a list of hero ids (first five for Radiant, last five for Dire)",
+        )
+
     args = parser.parse_args()
+
 
     if (
         args.load_all
@@ -760,6 +786,13 @@ def main():
             f"Confidence >={confidence*100:.1f}%: Accuracy: {accuracy*100:.4f}% count: {count} fraction: {fraction*100:.4f}%",
             file=sys.stderr,
         )
+
+    if args.predict:
+        if not (args.load_all or args.load_nn or args.train_all or args.train_nn):
+            print("PyTorch model not trained/loaded. Use --load_nn or --train_nn", file=sys.stderr)
+        else:
+            hero_list_str = args.predict
+            predict_by_hero_list(hero_list_str)
 
     if args.test_calibration:
         header = "=" * 5 + " Calibration Test " + "=" * 5

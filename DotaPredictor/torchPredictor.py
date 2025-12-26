@@ -225,7 +225,7 @@ class TorchPredictor:
              return None
         
         # 2. Generate vector using the PyTorch-specific generator
-        X = preprocessing.generate_pytorch_vector(match)
+        X = preprocessing.generate_pytorch_vector_by_match(match)
 
         # 3. Predict
         return self.predict_proba(X)[0]

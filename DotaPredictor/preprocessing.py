@@ -7,7 +7,7 @@ import numpy as np
 from gensim.models import Word2Vec
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-import tqdm
+from tqdm import tqdm
 
 import DotaPredictor
 import algPredictor
@@ -21,7 +21,7 @@ def load_stats():
         return ALL_STATS
 
     path = os.path.join("data", "all_hero_stats.json")
-    print(f"Loading and optimizing hero stats from {path}...", file=sys.stderr)
+    tqdm.write(f"Loading and optimizing hero stats from {path}...")
     
     try:
         with open(path, "r") as f:
@@ -251,9 +251,7 @@ def generate_embedded_training_set(matches_json):
 
     return X, y
 
-def generate_pytorch_vector(match_json):
-    r_ids, d_ids = extract_hero_ids_from_json(match_json)
-    
+def generate_pytorch_vector_by_hero_ids(r_ids, d_ids):
     # Pad/Trim to 5
     r_vec = [int(x) for x in r_ids][:5] + [0]*(5-len(r_ids))
     d_vec = [int(x) for x in d_ids][:5] + [0]*(5-len(d_ids))
@@ -266,6 +264,11 @@ def generate_pytorch_vector(match_json):
     # Result is now length: 5 + 5 + 3
     return np.array(r_vec + d_vec + stats_components)
 
+def generate_pytorch_vector_by_match(match_json):
+    r_ids, d_ids = extract_hero_ids_from_json(match_json)
+    return generate_pytorch_vector_by_hero_ids(r_ids, d_ids)
+
+
 def generate_pytorch_training_set(data):
     matches = data.get("data")
     X_list = []
@@ -277,7 +280,7 @@ def generate_pytorch_training_set(data):
     
     for key, match in iterator:
         try:
-            feature_vector = generate_pytorch_vector(match)
+            feature_vector = generate_pytorch_vector_by_match(match)
             label = get_label(match)
             
             X_list.append(feature_vector)
