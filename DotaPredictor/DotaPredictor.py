@@ -661,7 +661,6 @@ def main():
                 "r",
                 encoding=config.DEFAULT_ENCODING,
             ) as f:
-                all_stats = json.load(f)
                 all_stats = preprocessing.load_stats(json.load(f))
         except IOError as e:
             print(f"Could not access hero stats file: {e}", file=sys.stderr)
@@ -756,9 +755,9 @@ def main():
         print("=" * len(header), file=sys.stderr)
         print(file=sys.stderr)
 
-    def print_confidence_accuracy(confidence, accuracy, count):
+    def print_confidence_accuracy(confidence, accuracy, count, fraction):
         print(
-            f"Confidence >={confidence*100:.1f}%: Accuracy: {accuracy*100:.4f}% count: {count}",
+            f"Confidence >={confidence*100:.1f}%: Accuracy: {accuracy*100:.4f}% count: {count} fraction: {fraction*100:.4f}%",
             file=sys.stderr,
         )
 
@@ -793,7 +792,8 @@ def main():
 
             for threshold in thresholds:
                 count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
-                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+                fraction = count / y_test.size if y_test.size > 0 else 0
+                print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
             print(file=sys.stderr)
 
         if (args.load_all or args.load_logreg) or (args.train_all or args.train_logreg):
@@ -801,21 +801,24 @@ def main():
             probas = logRegPredictor.predict_proba(X_test)
             for threshold in thresholds:
                 count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
-                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+                fraction = count / y_test.size if y_test.size > 0 else 0
+                print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
             print(file=sys.stderr)
         if (args.load_all or args.load_rbf) or (args.train_all or args.train_rbf):
             print("RBF SVM Predictor:", file=sys.stderr)
             probas = rbfPredictor.predict_proba(X_test)
             for threshold in thresholds:
                 count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
-                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+                fraction = count / y_test.size if y_test.size > 0 else 0
+                print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
             print(file=sys.stderr)
         if (args.load_all or args.load_mlp) or (args.train_all or args.train_mlp):
             print("MLP Predictor:", file=sys.stderr)
             probas = mlpPredictor.predict_proba(X_test)
             for threshold in thresholds:
                 count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
-                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+                fraction = count / y_test.size if y_test.size > 0 else 0
+                print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
             print(file=sys.stderr)
 
         if (args.load_all or args.load_tree) or (args.train_all or args.train_tree):
@@ -823,7 +826,8 @@ def main():
             probas = treePredictor.predict_proba(X_test)
             for threshold in thresholds:
                 count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
-                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+                fraction = count / y_test.size if y_test.size > 0 else 0
+                print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
             print(file=sys.stderr)
 
         if (args.load_all or args.load_cat) or (args.train_all or args.train_cat):
@@ -831,7 +835,8 @@ def main():
             probas = catPredictor.predict_proba(X_test)
             for threshold in thresholds:
                 count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
-                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+                fraction = count / y_test.size if y_test.size > 0 else 0
+                print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
             print(file=sys.stderr)
 
         if (args.load_all or args.load_nn) or (args.train_all or args.train_nn):
@@ -841,7 +846,8 @@ def main():
             for threshold in thresholds:
                 # Use y_nn_test
                 count, accuracy = get_confidence_accuracy(probas, y_nn_test, threshold)
-                print_confidence_accuracy(0.5 + threshold, accuracy, count)
+                fraction = count / y_test.size if y_test.size > 0 else 0
+                print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
 
         print("=" * len(header), file=sys.stderr)
         print(file=sys.stderr)
