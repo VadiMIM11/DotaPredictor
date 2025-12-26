@@ -46,7 +46,7 @@ def load_stats():
 
     # Iterate through all possible heroes
     # range(1, 200) covers all current and near-future heroes safely
-    for i in tqdm.tqdm(range(1, config.MAX_HERO_ID + 50)):
+    for i in range(1, config.MAX_HERO_ID + 50):
         hero_id = int(i)
         
         # Pre-initialize inner dictionaries so lookups don't crash on "key not found"
@@ -82,7 +82,7 @@ def load_stats():
             win_rate = float(v["winsAverage"])
             optimized_stats["vs"][hero_id][target_id] = win_rate
 
-    print(f"Hero stats optimization complete. Stats size: {sys.getsizeof(optimized_stats)} Bytes", file=sys.stderr)
+    #print(f"Hero stats optimization complete. Stats size: {sys.getsizeof(optimized_stats)} Bytes", file=sys.stderr)
     ALL_STATS = optimized_stats
     return ALL_STATS
 
