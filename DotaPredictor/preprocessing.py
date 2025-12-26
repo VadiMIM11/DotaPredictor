@@ -15,14 +15,76 @@ import config
 
 ALL_STATS = None
 
-
 def load_stats():
     global ALL_STATS
-    if ALL_STATS is None:
-        with open(os.path.join("data", "all_hero_stats.json"), "r") as f:
-            ALL_STATS = json.load(f)
-    return ALL_STATS
+    if ALL_STATS is not None:
+        return ALL_STATS
 
+    path = os.path.join("data", "all_hero_stats.json")
+    print(f"Loading and optimizing hero stats from {path}...", file=sys.stderr)
+    
+    try:
+        with open(path, "r") as f:
+            raw_stats = json.load(f)
+    except Exception as e:
+        print(f"Error loading stats file: {e}", file=sys.stderr)
+        return None
+
+    # Initialize the Optimized Hash Table
+    # Structure:
+    # {
+    #    "with": { hero_id_1: { hero_id_2: winrate, ... }, ... },
+    #    "vs":   { hero_id_1: { hero_id_2: winrate, ... }, ... }
+    # }
+    optimized_stats = {
+        "with": {},
+        "vs": {}
+    }
+
+    # Extract the huge dictionary from the JSON wrapper
+    hero_data_map = raw_stats.get("data", {}).get("heroStats", {})
+
+    # Iterate through all possible heroes
+    # range(1, 200) covers all current and near-future heroes safely
+    for i in tqdm.tqdm(range(1, config.MAX_HERO_ID + 50)):
+        hero_id = int(i)
+        
+        # Pre-initialize inner dictionaries so lookups don't crash on "key not found"
+        # They will just be empty dicts if no data exists
+        optimized_stats["with"][hero_id] = {}
+        optimized_stats["vs"][hero_id] = {}
+
+        # The key in the JSON file (e.g., "hero1MatchUp")
+        json_key = f"hero{hero_id}MatchUp"
+        
+        matchup_data_list = hero_data_map.get(json_key)
+        
+        # If data is missing or empty, skip
+        if not matchup_data_list:
+            continue
+            
+        # Stratz returns a list, but for specific IDs it usually has 1 entry
+        entry = matchup_data_list[0]
+        
+        # 1. Optimize "WITH"
+        # Convert list of objects -> Dictionary {id: wr}
+        raw_with = entry.get("with") or []
+        for w in raw_with:
+            target_id = int(w["heroId2"])
+            win_rate = float(w["winsAverage"])
+            optimized_stats["with"][hero_id][target_id] = win_rate
+
+        # 2. Optimize "VS"
+        # Convert list of objects -> Dictionary {id: wr}
+        raw_vs = entry.get("vs") or []
+        for v in raw_vs:
+            target_id = int(v["heroId2"])
+            win_rate = float(v["winsAverage"])
+            optimized_stats["vs"][hero_id][target_id] = win_rate
+
+    print(f"Hero stats optimization complete. Stats size: {sys.getsizeof(optimized_stats)} Bytes", file=sys.stderr)
+    ALL_STATS = optimized_stats
+    return ALL_STATS
 
 def extract_hero_ids_from_json(match_json):
     radiant_heroes = []

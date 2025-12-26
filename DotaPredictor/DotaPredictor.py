@@ -662,6 +662,7 @@ def main():
                 encoding=config.DEFAULT_ENCODING,
             ) as f:
                 all_stats = json.load(f)
+                all_stats = preprocessing.load_stats(json.load(f))
         except IOError as e:
             print(f"Could not access hero stats file: {e}", file=sys.stderr)
             print("Try fetching hero stats from stratz using --update", file=sys.stderr)

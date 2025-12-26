@@ -17,48 +17,30 @@ def logit(p):
     return np.log(p / (1 - p))
 
 def getWinrateWith(hero1, hero2, all_stats):
-    hero1 = int(hero1)
-    hero2 = int(hero2)
-    hero1_matchups = all_stats["data"]["heroStats"].get(f"hero{hero1}MatchUp")
-    if not hero1_matchups:
-        #print(f"Warning: No data for hero {hero1}, Returning 50%", file=sys.stderr)
-        return logit(0.5)
-    if hero1 == hero2:
-        float_wr = float(hero1_matchups[0]["winRate"])
-        return logit(float_wr)
+    # Ensure inputs are ints for dictionary lookup
+    h1 = int(hero1)
+    h2 = int(hero2)
     
-    for entry in hero1_matchups:
-        if entry["heroId"] == hero1:
-            for with_entry in entry["with"]:
-                if with_entry["heroId2"] == hero2:
-                    float_wr = float(with_entry["winsAverage"])
-                    return logit(float_wr)
-            print(f"No 'with' data for hero {hero1} with hero {hero2}", file=sys.stderr)
-            return logit(0.5)  # Neutral if no data
-        else:
-            print(f"Hero id mismatch: hero{entry["heroId"]}MatchUp entry has heroId: {hero1}", file=sys.stderr)
-            exit(1)
-    #print(f"Warning: winrate with not found for {hero1} and {hero2}. Returning 50%", file=sys.stderr)
-    return logit(0.5)  # Neutral if no data
-
+    # Fast O(1) Lookup
+    try:
+        # Access: all_stats["with"][hero1][hero2]
+        float_wr = all_stats["with"][h1][h2]
+        return logit(float_wr)
+    except KeyError:
+        # If the hero pair doesn't exist in stats, return 0.5 (neutral)
+        return logit(0.5)
 
 def getWinrateAgainst(hero1, hero2, all_stats):
-    hero1 = int(hero1)
-    hero2 = int(hero2)
-    hero1_matchups = all_stats["data"]["heroStats"].get(f"hero{hero1}MatchUp")
-    if not hero1_matchups:
-        #print(f"Warning: No data for hero {hero1}, Returning 50%", file=sys.stderr)
+    h1 = int(hero1)
+    h2 = int(hero2)
+    
+    # Fast O(1) Lookup
+    try:
+        # Access: all_stats["vs"][hero1][hero2]
+        float_wr = all_stats["vs"][h1][h2]
+        return logit(float_wr)
+    except KeyError:
         return logit(0.5)
-    for entry in hero1_matchups:
-        if entry["heroId"] == hero1:
-            for with_entry in entry["vs"]:
-                if with_entry["heroId2"] == hero2:
-                    return logit(with_entry["winsAverage"])
-        else:
-            print(f"Hero id mismatch: hero{entry["heroId"]}MatchUp entry has heroId: {hero1}", file=sys.stderr)
-            exit(1)
-    #print(f"Warning: winrate against not found for {hero1} and {hero2}. Returning 50%", file=sys.stderr)
-    return logit(0.5)  # Neutral if no data
     
 def get_avg_wr_with(radiantHeroes, direHeroes, all_stats):
 
@@ -120,6 +102,7 @@ def predict_by_match_id(m_id):
         print(f"Could not access hero stats file: {e}", file=sys.stderr)
         print("Try fetching hero stats from stratz using --update", file=sys.stderr)
         exit(1)
+    all_stats = preprocessing.load_stats()
     match = DotaPredictor.get_match_by_id(m_id)
     feature_vector = preprocessing.generate_multihot_fv(match)
     return predict(feature_vector, all_stats)
