@@ -879,7 +879,7 @@ def main():
             for threshold in thresholds:
                 # Use y_nn_test
                 count, accuracy = get_confidence_accuracy(probas, y_nn_test, threshold)
-                fraction = count / y_test.size if y_test.size > 0 else 0
+                fraction = count / y_nn_test.size if y_nn_test.size > 0 else 0
                 print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
 
         print("=" * len(header), file=sys.stderr)
