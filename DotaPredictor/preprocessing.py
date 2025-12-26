@@ -69,6 +69,7 @@ def load_stats():
         # 1. Optimize "WITH"
         # Convert list of objects -> Dictionary {id: wr}
         raw_with = entry.get("with") or []
+        optimized_stats["with"][hero_id][hero_id] = entry['winRate'] # Self winrate
         for w in raw_with:
             target_id = int(w["heroId2"])
             win_rate = float(w["winsAverage"])

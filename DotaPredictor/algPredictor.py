@@ -4,6 +4,8 @@ import numpy as np
 import os
 import json
 
+from tqdm import tqdm
+
 import DotaPredictor
 import config
 import preprocessing
@@ -20,8 +22,9 @@ def getWinrateWith(hero1, hero2, all_stats):
     # Ensure inputs are ints for dictionary lookup
     h1 = int(hero1)
     h2 = int(hero2)
+    if h1 == 0 or h2 == 0: # Empty hero slot
+        return None
     
-    # Fast O(1) Lookup
     try:
         # Access: all_stats["with"][hero1][hero2]
         float_wr = all_stats["with"][h1][h2]
@@ -33,8 +36,9 @@ def getWinrateWith(hero1, hero2, all_stats):
 def getWinrateAgainst(hero1, hero2, all_stats):
     h1 = int(hero1)
     h2 = int(hero2)
-    
-    # Fast O(1) Lookup
+    if h1 == 0 or h2 == 0: # Empty hero slot
+        return None
+
     try:
         # Access: all_stats["vs"][hero1][hero2]
         float_wr = all_stats["vs"][h1][h2]
@@ -46,19 +50,25 @@ def get_avg_wr_with(radiantHeroes, direHeroes, all_stats):
 
     if len(radiantHeroes) != 5 or len(direHeroes) != 5:
         print("Invalid team format: ", radiantHeroes, direHeroes, file=sys.stderr)
-        raise ValueError("Invalid team format")
+        raise ValueError("Invalid team format. Must be length 5 (use 0 for empty slots)")
 
     wr_with_sum = 0.0
     countWith = 0
     for i in range(0, len(radiantHeroes)):
+        if int(radiantHeroes[i]) == 0: 
+            continue
         for j in range(i, len(radiantHeroes)):
+            if int(radiantHeroes[j]) == 0:
+                continue
             wr = getWinrateWith(radiantHeroes[i], radiantHeroes[j], all_stats)
             #print(f"Winrate of {radiantHeroes[i]} with {radiantHeroes[j]}: {wr}")
-            wr_with_sum += wr
-            countWith += 1
+            if wr is not None:
+                wr_with_sum += wr
+                countWith += 1
 
     if countWith == 0:
-        raise ValueError("No 'with' data found")
+        tqdm.write("Warning: No valid hero matchups found for with calculation. Empty draft?")
+        return logit(0.5) # Neutral if no data
 
     avg_wr_with = wr_with_sum / countWith
     return avg_wr_with
@@ -72,24 +82,27 @@ def get_avg_wr_against(radiantHeroes, direHeroes, all_stats):
     wr_against_sum = 0.0
     countAgainst = 0
     for i in range(0, len(radiantHeroes)):
+        if int(radiantHeroes[i]) == 0:
+            continue
         for j in range(0, len(direHeroes)):
+            if int(direHeroes[j]) == 0:
+                continue
             wr = getWinrateAgainst(radiantHeroes[i], direHeroes[j], all_stats)
             #print(f"Winrate of {radiantHeroes[i]} vs {direHeroes[j]}: {wr}")
-            wr_against_sum += wr
-            countAgainst += 1
+            if wr is not None:
+                wr_against_sum += wr
+                countAgainst += 1
 
     if countAgainst == 0:
-        raise ValueError("No 'against' data found")
+        tqdm.write("Warning: No valid hero matchups found for against calculation. Empty draft?")
+        return logit(0.5) # Neutral if no data        
 
     avg_wr_against = wr_against_sum / countAgainst
     return avg_wr_against
 
 def predict(radiant_ids, dire_ids, all_stats):
-    radiantHeroes = radiant_ids
-    direHeroes = dire_ids
-
-    avg_wr_with = get_avg_wr_with(radiantHeroes, direHeroes, all_stats)
-    avg_wr_against = get_avg_wr_against(radiantHeroes, direHeroes, all_stats)
+    avg_wr_with = get_avg_wr_with(radiant_ids, dire_ids, all_stats)
+    avg_wr_against = get_avg_wr_against(radiant_ids, dire_ids, all_stats)
 
     final_prediction = sigmoid((avg_wr_with + avg_wr_against) / 2.0)
     return final_prediction
