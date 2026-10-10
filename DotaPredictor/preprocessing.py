@@ -185,7 +185,7 @@ def generate_multihot_training_set(matches_json):
     matches = matches_json.get("data")
     X_list = []
     y_list = []
-    for key, match in tqdm.tqdm(matches.items()):
+    for key, match in tqdm(matches.items()):
         feature_vector = generate_multihot_fv(match)
         label = get_label(match)
         X_list.append(feature_vector)
@@ -227,7 +227,7 @@ def generate_embedded_training_set(matches_json):
     matches = matches_json.get("data")
     X_list = []
     y_list = []
-    for key, match in tqdm.tqdm(matches.items()):
+    for key, match in tqdm(matches.items()):
         feature_vector = generate_embedding(match)
         label = get_label(match)
         X_list.append(feature_vector)
@@ -276,7 +276,7 @@ def generate_pytorch_training_set(data):
     
     print("Generating PyTorch training set...", file=sys.stderr)
     
-    iterator = tqdm.tqdm(matches.items()) if matches else []
+    iterator = tqdm(matches.items()) if matches else []
     
     for key, match in iterator:
         try:

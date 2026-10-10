@@ -88,11 +88,11 @@ class TorchPredictor:
     def build_model(self):
         # Ensure config.MAX_HERO_ID is set (usually ~138-150)
         # We add a buffer to be safe
-        NUM_HEROES = getattr(config, 'MAX_HERO_ID', 155) + 10
+        MAX_HERO_ID = getattr(config, 'MAX_HERO_ID', 155) + 10
         EMB_DIM = 16  
         STATS_DIM = 3 # AlgPredictor score
         
-        self.model = DotaNeuralNet(NUM_HEROES, EMB_DIM, STATS_DIM)
+        self.model = DotaNeuralNet(MAX_HERO_ID, EMB_DIM, STATS_DIM)
 
         w2v_path = os.path.join(config.MODELS_FOLDER, "embeddings.model")
         if os.path.exists(w2v_path):
@@ -108,7 +108,7 @@ class TorchPredictor:
                 
                     hits = 0
                     # Iterate over all possible Hero IDs in the PyTorch layer
-                    for i in range(1, NUM_HEROES):
+                    for i in range(1, MAX_HERO_ID):
                         # PyTorch uses Int(i), Word2Vec uses Str('i')
                         w2v_key = str(i)
                     
