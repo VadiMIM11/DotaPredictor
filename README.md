@@ -95,6 +95,14 @@ python DotaPredictor.py --load_data --load_nn --test_calibration
 
 Despite its name, `--test_calibration` reports accuracy and sample coverage at confidence thresholds; it does not fit a probability calibrator. After changing the dataset or matchup statistics, regenerate features and retrain rather than reusing stale caches.
 
+The matchup-statistics baseline can also be evaluated independently:
+
+```sh
+python DotaPredictor.py --test_alg_predict --test_calibration
+```
+
+This requires `data/clean_train.json` and `data/all_hero_stats.json`, but no trained ML models. Baseline accuracy is reported over all valid filtered matches; confidence-threshold results use a 25% split of those matches. You can combine these flags with `--load_data --load_all` to compare with saved ML models.
+
 ## How it works
 
 ```text
@@ -130,5 +138,5 @@ The CLI calls the random-forest option `--train_tree` / `--load_tree`; it is not
 - Predictions use hero composition and aggregate matchup statistics. They do not establish a causal effect of a pick or guarantee a match result. Partial-draft estimates are experimental.
 - Evaluation is exploratory: standard features are scaled before the test split, and fetched matchup statistics are not tied to each historical match's date. A time-separated evaluation with preprocessing fitted only on training data would be needed for stronger performance claims.
 - Hero-ID bounds, the fetch starting point, and match filters are configured manually. Review them when using a different dataset or game patch.
-- The statistical baseline is used in feature engineering, but its standalone `--test_alg_predict` path needs repair. Standard-model `--predict_by_id` paths also use a different feature representation from training. The usage examples above use PyTorch draft prediction.
+- Standard-model `--predict_by_id` paths use a different feature representation from training. The draft-prediction examples above use PyTorch.
 - Hero-pick recommendation is unfinished and is not a supported workflow. Any local `heroPicker.py` / `--suggest_pick` work should be treated as a draft feature.

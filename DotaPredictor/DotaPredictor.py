@@ -681,20 +681,13 @@ def main():
         except IOError as e:
             print(f"Could not access clean training data file: {e}", file=sys.stderr)
             exit(1)
-        try:
-            with open(
-                os.path.join("data", "all_hero_stats.json"),
-                "r",
-                encoding=config.DEFAULT_ENCODING,
-            ) as f:
-                all_stats = preprocessing.load_stats(json.load(f))
-        except IOError as e:
-            print(f"Could not access hero stats file: {e}", file=sys.stderr)
-            print("Try fetching hero stats from stratz using --update", file=sys.stderr)
-            exit(1)
+        all_stats = preprocessing.load_stats()
+        if all_stats is None:
+            print("Could not load hero stats. Run --update_stats first.", file=sys.stderr)
+            return
 
         print(file=sys.stderr)
-        header = "=" * 5 + " Statistical Prediictor " + "=" * 5
+        header = "=" * 5 + " Statistical Predictor " + "=" * 5
         print(header, file=sys.stderr)
         matches = data["data"]
         total_matches = len(matches)
@@ -706,10 +699,11 @@ def main():
         true_negative_count = 0
         false_negative_count = 0
         outdrafted = []
+        alg_probas, alg_labels = [], []
         for match_key, match_value in tqdm(matches.items()):
             try:
                 # feature_vector = generate_feature_vector(match_value)
-                r_ids, d_ids = preprocessing.extract_radiant_hero_ids_from_json(
+                r_ids, d_ids = preprocessing.extract_hero_ids_from_json(
                     match_value
                 )
                 predicted_prob = algPredictor.predict(r_ids, d_ids, all_stats)
@@ -720,6 +714,8 @@ def main():
                         file=sys.stderr,
                     )
                     continue
+                alg_probas.append([1 - predicted_prob, predicted_prob])
+                alg_labels.append(1 if didRadiantWin else -1)
                 if abs(0.5 - predicted_prob) > 0.04:
                     # print()
                     # print(f"Highly outdrafted match detected!")
@@ -804,29 +800,21 @@ def main():
 
         if args.test_alg_predict:
             print("Statistical Predictor:", file=sys.stderr)
-            try:
-                with open(
-                    os.path.join("data", "all_hero_stats.json"),
-                    "r",
-                    encoding=config.DEFAULT_ENCODING,
-                ) as f:
-                    all_stats = json.load(f)
-            except IOError as e:
-                print(f"Could not access hero stats file: {e}", file=sys.stderr)
-                print(
-                    "Try fetching hero stats from stratz using --update",
-                    file=sys.stderr,
+            if len(alg_labels) < 2:
+                print("Not enough valid matches for a statistical test split.", file=sys.stderr)
+            else:
+                # Keep baseline probabilities aligned with their own match labels.
+                # Standard X_test contains scaled embeddings, not hero IDs.
+                _, alg_probas_test, _, alg_y_test = train_test_split(
+                    np.asarray(alg_probas), np.asarray(alg_labels),
+                    test_size=0.25, random_state=config.RANDOM_STATE,
                 )
-                exit(1)
-
-            for i in range(len(X_test)):
-                prob = algPredictor.predict(X_test[i], all_stats)
-                probas.append([1 - prob, prob])
-
-            for threshold in thresholds:
-                count, accuracy = get_confidence_accuracy(probas, y_test, threshold)
-                fraction = count / y_test.size if y_test.size > 0 else 0
-                print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
+                for threshold in thresholds:
+                    count, accuracy = get_confidence_accuracy(
+                        alg_probas_test, alg_y_test, threshold
+                    )
+                    fraction = count / alg_y_test.size
+                    print_confidence_accuracy(0.5 + threshold, accuracy, count, fraction)
             print(file=sys.stderr)
 
         if (args.load_all or args.load_logreg) or (args.train_all or args.train_logreg):
